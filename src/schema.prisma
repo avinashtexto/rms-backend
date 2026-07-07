@@ -1,0 +1,773 @@
+// ============================================================
+// RMS — Prisma Schema
+// PostgreSQL | Multi-tenant Enterprise Records Management System
+// ============================================================
+
+generator client {
+  provider     = "prisma-client-js"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum RoleName {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  WAREHOUSE_MANAGER
+  SUPERVISOR
+  OPERATOR
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  INVITED
+}
+
+enum DeviceStatus {
+  PENDING
+  APPROVED
+  BLOCKED
+  RETIRED
+}
+
+enum BarcodeEntityType {
+  LOCATION
+  BOX
+  FILE_RECORD
+  USER
+  DEVICE
+}
+
+enum BoxStatus {
+  ACTIVE
+  MERGED
+  DESTROYED
+  IN_TRANSIT
+}
+
+enum FileRecordStatus {
+  ACTIVE
+  ARCHIVED
+  DESTROYED
+}
+
+enum WorkflowAction {
+  FRESH_BOX_MOVE
+  INVENTORY_VERIFY
+  REFILE_SUCCESS
+  REFILE_REJECT_WRONG_LOCATION
+  REFILE_REJECT_WRONG_BOX
+  SEGREGATION
+  MERGE
+  TRANSFER_INITIATE
+  TRANSFER_ACCEPT
+  LOCATION_OVERRIDE
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  CONFLICT
+}
+
+enum TransferStatus {
+  PENDING_ACCEPTANCE
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum NotificationType {
+  DUPLICATE_SCAN
+  WRONG_LOCATION
+  WRONG_BOX
+  INVENTORY_PENDING
+  SYNC_FAILED
+  LOW_BATTERY
+  GPS_DISABLED
+}
+
+// ============================================================
+// TENANCY & ORG MASTER DATA
+// ============================================================
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches      Branch[]
+  clients       Client[]
+  users         User[]
+  devices       Device[]
+  roles         Role[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  reasonCodes   ReasonCode[]
+
+  @@map("companies")
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  sites   Site[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("branches")
+}
+
+model Site {
+  id        String   @id @default(uuid())
+  companyId String
+  branchId  String
+  name      String
+  code      String
+  address   String?
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  warehouses Warehouse[]
+
+  @@unique([branchId, code])
+  @@index([companyId])
+  @@map("sites")
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  companyId String
+  siteId    String
+  name      String
+  code      String
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  site          Site       @relation(fields: [siteId], references: [id])
+  rooms         Room[]
+  gpsTracks     GpsTrack[]
+  transfersFrom Transfer[] @relation("TransferFromWarehouse")
+  transfersTo   Transfer[] @relation("TransferToWarehouse")
+
+  @@unique([siteId, code])
+  @@index([companyId])
+  @@map("warehouses")
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  warehouseId String
+  name        String
+  code        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  racks     Rack[]
+
+  @@unique([warehouseId, code])
+  @@map("rooms")
+}
+
+model Rack {
+  id        String   @id @default(uuid())
+  roomId    String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room    Room    @relation(fields: [roomId], references: [id])
+  shelves Shelf[]
+
+  @@unique([roomId, code])
+  @@map("racks")
+}
+
+model Shelf {
+  id        String   @id @default(uuid())
+  rackId    String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rack      Rack       @relation(fields: [rackId], references: [id])
+  locations Location[]
+
+  @@unique([rackId, code])
+  @@map("shelves")
+}
+
+// Smallest addressable physical slot. Has its own barcode.
+model Location {
+  id         String   @id @default(uuid())
+  shelfId    String
+  name       String
+  barcode    String   @unique
+  isOccupied Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  shelf Shelf @relation(fields: [shelfId], references: [id])
+
+  // exactly one currently-active box may point here (enforced in service layer via transaction)
+  currentBox Box?
+
+  freshBoxMoves    FreshBoxMoveScan[]
+  refileEvents     RefileEvent[]
+  locationOverride LocationOverride[]
+
+  @@unique([shelfId, name])
+  @@index([barcode])
+  @@map("locations")
+}
+
+// ============================================================
+// CLIENT / DEPARTMENT (whose records are stored)
+// ============================================================
+
+model Client {
+  id           String   @id @default(uuid())
+  companyId    String
+  name         String
+  code         String
+  contactEmail String?
+  contactPhone String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  departments Department[]
+  boxes       Box[]
+
+  @@unique([companyId, code])
+  @@map("clients")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  clientId  String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id])
+  boxes  Box[]
+
+  @@unique([clientId, code])
+  @@map("departments")
+}
+
+// ============================================================
+// USERS / RBAC
+// ============================================================
+
+model Role {
+  id        String   @id @default(uuid())
+  companyId String? // null = platform-level system role (e.g. SUPER_ADMIN)
+  name      RoleName
+  label     String
+  createdAt DateTime @default(now())
+
+  company     Company?         @relation(fields: [companyId], references: [id])
+  users       User[]
+  permissions RolePermission[]
+
+  @@unique([companyId, name])
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(uuid())
+  key         String @unique // e.g. "box:create", "file:refile", "audit:view"
+  description String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  companyId    String
+  roleId       String
+  employeeCode String
+  fullName     String
+  email        String     @unique
+  phone        String?
+  passwordHash String
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  role    Role    @relation(fields: [roleId], references: [id])
+
+  devices                Device[]
+  refreshTokens          RefreshToken[]
+  auditLogs              AuditLog[]
+  gpsTracks              GpsTrack[]
+  notifications          Notification[]
+  freshBoxMoves          FreshBoxMoveSession[]
+  inventoryVerifications InventoryVerificationSession[]
+  refileEvents           RefileEvent[]
+  segregationSessions    SegregationSession[]
+  mergeSessions          MergeSession[]
+  transfersInitiated     Transfer[]                     @relation("TransferInitiatedBy")
+  transfersAccepted      Transfer[]                     @relation("TransferAcceptedBy")
+  locationOverrides      LocationOverride[]
+  syncConflicts          SyncConflict[]
+
+  @@unique([companyId, employeeCode])
+  @@index([companyId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// DEVICES / BARCODE TYPES
+// ============================================================
+
+model Device {
+  id             String       @id @default(uuid())
+  companyId      String
+  assignedUserId String?
+  serialNumber   String       @unique
+  model          String
+  status         DeviceStatus @default(PENDING)
+  lastSeenAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  company      Company @relation(fields: [companyId], references: [id])
+  assignedUser User?   @relation(fields: [assignedUserId], references: [id])
+
+  auditLogs AuditLog[]
+  gpsTracks GpsTrack[]
+
+  @@index([companyId])
+  @@map("devices")
+}
+
+model ReasonCode {
+  id        String  @id @default(uuid())
+  companyId String
+  code      String
+  label     String
+  appliesTo String // e.g. "LOCATION_OVERRIDE", "REFILE_REJECT"
+  isActive  Boolean @default(true)
+
+  company           Company            @relation(fields: [companyId], references: [id])
+  locationOverrides LocationOverride[]
+
+  @@unique([companyId, code])
+  @@map("reason_codes")
+}
+
+// ============================================================
+// BOX / FILE RECORD (core physical entities)
+// ============================================================
+
+model Box {
+  id           String    @id @default(uuid())
+  companyId    String
+  clientId     String
+  departmentId String?
+  barcode      String    @unique
+  status       BoxStatus @default(ACTIVE)
+  description  String?
+
+  currentLocationId String? @unique
+  mergedIntoBoxId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client          Client      @relation(fields: [clientId], references: [id])
+  department      Department? @relation(fields: [departmentId], references: [id])
+  currentLocation Location?   @relation(fields: [currentLocationId], references: [id])
+  mergedIntoBox   Box?        @relation("BoxMergeChain", fields: [mergedIntoBoxId], references: [id])
+  mergedFromBoxes Box[]       @relation("BoxMergeChain")
+
+  fileRecords FileRecord[]
+
+  freshBoxMoveScans             FreshBoxMoveScan[]
+  inventoryVerificationScans    InventoryVerificationScan[]
+  inventoryVerificationSessions InventoryVerificationSession[]
+  refileEvents                  RefileEvent[]
+  segregationOldBox             SegregationSession[]           @relation("SegregationOldBox")
+  segregationNewBox             SegregationSession[]           @relation("SegregationNewBox")
+  transfers                     Transfer[]
+
+  @@index([companyId, clientId])
+  @@index([barcode])
+  @@map("boxes")
+}
+
+model FileRecord {
+  id        String           @id @default(uuid())
+  companyId String
+  boxId     String
+  barcode   String           @unique
+  title     String?
+  status    FileRecordStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  box Box @relation(fields: [boxId], references: [id])
+
+  inventoryVerificationScans InventoryVerificationScan[]
+  refileEvents               RefileEvent[]
+  segregationMovedFiles      SegregationFileMove[]
+
+  @@index([companyId, boxId])
+  @@index([barcode])
+  @@map("file_records")
+}
+
+// ============================================================
+// WORKFLOW 1 — FRESH BOX MOVING
+// ============================================================
+
+model FreshBoxMoveSession {
+  id         String    @id @default(uuid())
+  operatorId String
+  deviceId   String?
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+
+  operator User               @relation(fields: [operatorId], references: [id])
+  scans    FreshBoxMoveScan[]
+
+  @@map("fresh_box_move_sessions")
+}
+
+model FreshBoxMoveScan {
+  id            String     @id @default(uuid())
+  sessionId     String
+  locationId    String
+  boxId         String
+  clientEventId String     @unique // idempotency key from mobile device
+  gpsLat        Float?
+  gpsLng        Float?
+  syncStatus    SyncStatus @default(SYNCED)
+  scannedAt     DateTime
+
+  session  FreshBoxMoveSession @relation(fields: [sessionId], references: [id])
+  location Location            @relation(fields: [locationId], references: [id])
+  box      Box                 @relation(fields: [boxId], references: [id])
+
+  @@index([sessionId])
+  @@map("fresh_box_move_scans")
+}
+
+// ============================================================
+// WORKFLOW 2 — INVENTORY VERIFICATION
+// ============================================================
+
+model InventoryVerificationSession {
+  id                  String    @id @default(uuid())
+  operatorId          String
+  boxId               String
+  startedAt           DateTime  @default(now())
+  endedAt             DateTime?
+  missingFileCount    Int       @default(0)
+  unexpectedFileCount Int       @default(0)
+
+  operator User                        @relation(fields: [operatorId], references: [id])
+  box      Box                         @relation(fields: [boxId], references: [id])
+  scans    InventoryVerificationScan[]
+
+  @@map("inventory_verification_sessions")
+}
+
+model InventoryVerificationScan {
+  id            String   @id @default(uuid())
+  sessionId     String
+  boxId         String
+  fileRecordId  String? // null if scanned barcode did not resolve to a known file (unexpected)
+  clientEventId String   @unique
+  isExpected    Boolean
+  isMissingFlag Boolean  @default(false)
+  scannedAt     DateTime
+
+  session    InventoryVerificationSession @relation(fields: [sessionId], references: [id])
+  box        Box                          @relation(fields: [boxId], references: [id])
+  fileRecord FileRecord?                  @relation(fields: [fileRecordId], references: [id])
+
+  @@index([sessionId])
+  @@map("inventory_verification_scans")
+}
+
+// ============================================================
+// WORKFLOW 3 — REFILE
+// ============================================================
+
+model RefileEvent {
+  id                 String         @id @default(uuid())
+  operatorId         String
+  fileRecordId       String
+  expectedBoxId      String
+  expectedLocationId String
+  scannedLocationId  String
+  scannedBoxId       String
+  action             WorkflowAction // REFILE_SUCCESS | REFILE_REJECT_WRONG_LOCATION | REFILE_REJECT_WRONG_BOX
+  clientEventId      String         @unique
+  scannedAt          DateTime
+
+  operator        User       @relation(fields: [operatorId], references: [id])
+  fileRecord      FileRecord @relation(fields: [fileRecordId], references: [id])
+  expectedBox     Box        @relation(fields: [expectedBoxId], references: [id])
+  scannedLocation Location   @relation(fields: [scannedLocationId], references: [id])
+
+  @@index([fileRecordId])
+  @@map("refile_events")
+}
+
+// ============================================================
+// WORKFLOW 4 — SEGREGATION
+// ============================================================
+
+model SegregationSession {
+  id         String    @id @default(uuid())
+  operatorId String
+  oldBoxId   String
+  newBoxId   String
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+
+  operator   User                  @relation(fields: [operatorId], references: [id])
+  oldBox     Box                   @relation("SegregationOldBox", fields: [oldBoxId], references: [id])
+  newBox     Box                   @relation("SegregationNewBox", fields: [newBoxId], references: [id])
+  movedFiles SegregationFileMove[]
+
+  @@map("segregation_sessions")
+}
+
+model SegregationFileMove {
+  id            String   @id @default(uuid())
+  sessionId     String
+  fileRecordId  String
+  clientEventId String   @unique
+  movedAt       DateTime @default(now())
+
+  session    SegregationSession @relation(fields: [sessionId], references: [id])
+  fileRecord FileRecord         @relation(fields: [fileRecordId], references: [id])
+
+  @@map("segregation_file_moves")
+}
+
+// ============================================================
+// MERGE
+// ============================================================
+
+model MergeSession {
+  id             String   @id @default(uuid())
+  operatorId     String
+  fromBoxId      String
+  toBoxId        String
+  approvedById   String? // Supervisor approval when above file-count threshold
+  fileCountMoved Int
+  createdAt      DateTime @default(now())
+
+  operator User @relation(fields: [operatorId], references: [id])
+
+  @@map("merge_sessions")
+}
+
+// ============================================================
+// TRANSFER
+// ============================================================
+
+model Transfer {
+  id              String         @id @default(uuid())
+  boxId           String
+  fromWarehouseId String
+  toWarehouseId   String
+  initiatedById   String
+  acceptedById    String?
+  status          TransferStatus @default(PENDING_ACCEPTANCE)
+  initiatedAt     DateTime       @default(now())
+  resolvedAt      DateTime?
+
+  box           Box       @relation(fields: [boxId], references: [id])
+  fromWarehouse Warehouse @relation("TransferFromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse @relation("TransferToWarehouse", fields: [toWarehouseId], references: [id])
+  initiatedBy   User      @relation("TransferInitiatedBy", fields: [initiatedById], references: [id])
+  acceptedBy    User?     @relation("TransferAcceptedBy", fields: [acceptedById], references: [id])
+
+  @@map("transfers")
+}
+
+// ============================================================
+// LOCATION OVERRIDE (manual admin correction, always reason-coded)
+// ============================================================
+
+model LocationOverride {
+  id           String   @id @default(uuid())
+  userId       String
+  locationId   String
+  reasonCodeId String
+  note         String?
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  location   Location   @relation(fields: [locationId], references: [id])
+  reasonCode ReasonCode @relation(fields: [reasonCodeId], references: [id])
+
+  @@map("location_overrides")
+}
+
+// ============================================================
+// OFFLINE SYNC CONFLICTS
+// ============================================================
+
+model SyncConflict {
+  id             String    @id @default(uuid())
+  userId         String
+  entityType     String // e.g. "Box", "FileRecord"
+  entityId       String
+  clientEventId  String
+  conflictReason String
+  payloadA       Json
+  payloadB       Json
+  resolvedAt     DateTime?
+  resolvedById   String?
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("sync_conflicts")
+}
+
+// ============================================================
+// GPS TRACKING
+// ============================================================
+
+model GpsTrack {
+  id          String   @id @default(uuid())
+  userId      String
+  deviceId    String?
+  warehouseId String?
+  latitude    Float
+  longitude   Float
+  capturedAt  DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id])
+  device    Device?    @relation(fields: [deviceId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  @@index([userId, capturedAt])
+  @@map("gps_tracks")
+}
+
+// ============================================================
+// AUDIT LOG (immutable, write-once)
+// ============================================================
+
+model AuditLog {
+  id            String         @id @default(uuid())
+  companyId     String
+  userId        String
+  deviceId      String?
+  warehouseId   String?
+  locationId    String?
+  boxId         String?
+  fileRecordId  String?
+  action        WorkflowAction
+  previousState Json?
+  newState      Json?
+  reasonCodeId  String?
+  gpsLat        Float?
+  gpsLng        Float?
+  createdAt     DateTime       @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  device  Device? @relation(fields: [deviceId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([boxId])
+  @@index([fileRecordId])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(uuid())
+  companyId String
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
