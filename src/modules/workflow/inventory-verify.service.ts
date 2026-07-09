@@ -257,4 +257,48 @@ export class InventoryVerifyService {
 
     return session;
   }
+
+  static async listSessions(companyId: string, page: number = 1, pageSize: number = 20) {
+    const skip = (page - 1) * pageSize;
+    const [sessions, total] = await Promise.all([
+      prisma.inventoryVerificationSession.findMany({
+        where: { operator: { companyId } },
+        include: {
+          box: {
+            select: {
+              id: true,
+              barcode: true,
+              description: true
+            }
+          },
+          operator: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true
+            }
+          },
+          _count: {
+            select: { scans: true }
+          }
+        },
+        orderBy: { startedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.inventoryVerificationSession.count({
+        where: { operator: { companyId } }
+      })
+    ]);
+
+    return {
+      data: sessions,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  }
 }

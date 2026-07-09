@@ -6,8 +6,8 @@ export const createRoomSchema = z.object({
 });
 
 export const updateRoomSchema = z.object({
-  name: z.string().min(1).optional(),
-  isActive: z.boolean().optional()
+  name: z.string().min(1).max(255).nullable().optional().transform(val => val === null ? undefined : val),
+  isActive: z.boolean().nullable().optional().transform(val => val === null ? undefined : val)
 });
 
 export const createRackSchema = z.object({
@@ -16,8 +16,8 @@ export const createRackSchema = z.object({
 });
 
 export const updateRackSchema = z.object({
-  name: z.string().min(1).optional(),
-  isActive: z.boolean().optional()
+  name: z.string().min(1).max(255).nullable().optional().transform(val => val === null ? undefined : val),
+  isActive: z.boolean().nullable().optional().transform(val => val === null ? undefined : val)
 });
 
 export const createShelfSchema = z.object({
@@ -26,8 +26,8 @@ export const createShelfSchema = z.object({
 });
 
 export const updateShelfSchema = z.object({
-  name: z.string().min(1).optional(),
-  isActive: z.boolean().optional()
+  name: z.string().min(1).max(255).nullable().optional().transform(val => val === null ? undefined : val),
+  isActive: z.boolean().nullable().optional().transform(val => val === null ? undefined : val)
 });
 
 export const createLocationSchema = z.object({
@@ -36,7 +36,7 @@ export const createLocationSchema = z.object({
 });
 
 export const updateLocationSchema = z.object({
-  name: z.string().min(1).optional(),
-  isActive: z.boolean().optional(),
-  isOccupied: z.boolean().optional()
+  name: z.string().min(1).max(255).nullable().optional().transform(val => val === null ? undefined : val),
+  isActive: z.boolean().nullable().optional().transform(val => val === null ? undefined : val),
+  isOccupied: z.boolean().nullable().optional().transform(val => val === null ? undefined : val)
 });

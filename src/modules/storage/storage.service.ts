@@ -359,6 +359,9 @@ export class StorageService {
       throw error;
     }
 
+    const site = location.shelf?.rack?.room?.warehouse?.site;
+    const branch = site?.branch;
+
     return {
       locationId: location.id,
       name: location.name,
@@ -366,12 +369,12 @@ export class StorageService {
       isOccupied: location.isOccupied,
       isActive: location.isActive,
       path: {
-        branch: { id: location.shelf.rack.room.warehouse.site.branch.id, name: location.shelf.rack.room.warehouse.site.branch.name, code: location.shelf.rack.room.warehouse.site.branch.code },
-        site: { id: location.shelf.rack.room.warehouse.site.id, name: location.shelf.rack.room.warehouse.site.name, code: location.shelf.rack.room.warehouse.site.code },
-        warehouse: { id: location.shelf.rack.room.warehouse.id, name: location.shelf.rack.room.warehouse.name, code: location.shelf.rack.room.warehouse.code },
-        room: { id: location.shelf.rack.room.id, name: location.shelf.rack.room.name, code: location.shelf.rack.room.code },
-        rack: { id: location.shelf.rack.id, name: location.shelf.rack.name, code: location.shelf.rack.code },
-        shelf: { id: location.shelf.id, name: location.shelf.name, code: location.shelf.code }
+        branch: branch ? { id: branch.id, name: branch.name, code: branch.code } : null,
+        site: site ? { id: site.id, name: site.name, code: site.code } : null,
+        warehouse: location.shelf?.rack?.room?.warehouse ? { id: location.shelf.rack.room.warehouse.id, name: location.shelf.rack.room.warehouse.name, code: location.shelf.rack.room.warehouse.code } : null,
+        room: location.shelf?.rack?.room ? { id: location.shelf.rack.room.id, name: location.shelf.rack.room.name, code: location.shelf.rack.room.code } : null,
+        rack: location.shelf?.rack ? { id: location.shelf.rack.id, name: location.shelf.rack.name, code: location.shelf.rack.code } : null,
+        shelf: location.shelf ? { id: location.shelf.id, name: location.shelf.name, code: location.shelf.code } : null
       }
     };
   }

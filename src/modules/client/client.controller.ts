@@ -11,8 +11,21 @@ export class ClientController {
   static async listClients(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const clients = await ClientService.listClients(companyId);
-      res.status(200).json({ success: true, data: clients });
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const pageSize = parseInt(req.query.pageSize as string, 10) || 20;
+      const result = await ClientService.listClients(companyId, page, pageSize);
+      res.status(200).json({ success: true, data: result.data, meta: result.meta });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getClientById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const clientId = req.params.id as string;
+      const client = await ClientService.getClientById(companyId, clientId);
+      res.status(200).json({ success: true, data: client });
     } catch (error) {
       next(error);
     }
@@ -38,7 +51,7 @@ export class ClientController {
   static async updateClient(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const clientId = req.params.clientId as string;
+      const clientId = req.params.id as string;
       const data = updateClientSchema.parse(req.body);
       const client = await ClientService.updateClient(
         companyId,
@@ -61,7 +74,7 @@ export class ClientController {
   static async listDepartments(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const clientId = req.params.clientId as string;
+      const clientId = req.params.id as string;
       const departments = await ClientService.listDepartments(companyId, clientId);
       res.status(200).json({ success: true, data: departments });
     } catch (error) {
@@ -72,7 +85,7 @@ export class ClientController {
   static async createDepartment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const clientId = req.params.clientId as string;
+      const clientId = req.params.id as string;
       const data = createDepartmentSchema.parse(req.body);
       const department = await ClientService.createDepartment(
         companyId,
@@ -89,7 +102,7 @@ export class ClientController {
   static async updateDepartment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const departmentId = req.params.departmentId as string;
+      const departmentId = req.params.id as string;
       const data = updateDepartmentSchema.parse(req.body);
       const department = await ClientService.updateDepartment(
         companyId,
@@ -106,7 +119,7 @@ export class ClientController {
   static async deleteClient(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const clientId = req.params.clientId as string;
+      const clientId = req.params.id as string;
       await ClientService.deleteClient(companyId, clientId);
       res.status(200).json({
         success: true,
@@ -120,7 +133,7 @@ export class ClientController {
   static async deleteDepartment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const departmentId = req.params.departmentId as string;
+      const departmentId = req.params.id as string;
       await ClientService.deleteDepartment(companyId, departmentId);
       res.status(200).json({
         success: true,

@@ -1,16 +1,32 @@
 import { Response, NextFunction } from 'express';
 import { SiteService } from './site.service';
-import { createSiteSchema, updateSiteSchema } from './site.validation';
+import { listSitesQuerySchema, createSiteSchema, updateSiteSchema } from './site.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class SiteController {
   static async listSites(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const sites = await SiteService.listSites(companyId);
+      const query = listSitesQuerySchema.parse(req.query);
+      const result = await SiteService.listSites(companyId, query.page, query.pageSize);
       res.status(200).json({
         success: true,
-        data: sites
+        data: result.data,
+        meta: result.meta
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getSiteById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const siteId = req.params.id as string;
+      const site = await SiteService.getSiteById(companyId, siteId);
+      res.status(200).json({
+        success: true,
+        data: site
       });
     } catch (error) {
       next(error);
@@ -27,8 +43,11 @@ export class SiteController {
         data.name,
         data.code,
         data.address,
-        data.latitude,
-        data.longitude
+        data.city,
+        data.state,
+        data.country,
+        data.phone,
+        data.isActive
       );
       res.status(201).json({
         success: true,
@@ -42,15 +61,19 @@ export class SiteController {
   static async updateSite(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const siteId = req.params.siteId as string;
+      const siteId = req.params.id as string;
       const data = updateSiteSchema.parse(req.body);
       const site = await SiteService.updateSite(
         companyId,
         siteId,
+        data.branchId,
         data.name,
+        data.code,
         data.address,
-        data.latitude,
-        data.longitude,
+        data.city,
+        data.state,
+        data.country,
+        data.phone,
         data.isActive
       );
       res.status(200).json({
@@ -65,7 +88,7 @@ export class SiteController {
   static async deleteSite(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const siteId = req.params.siteId as string;
+      const siteId = req.params.id as string;
       await SiteService.deleteSite(companyId, siteId);
       res.status(200).json({
         success: true,

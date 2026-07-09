@@ -12,7 +12,7 @@ export const mergeBoxesSchema = z.object({
 });
 
 export const initiateTransferSchema = z.object({
-  boxId: z.string().uuid(),
-  fromWarehouseId: z.string().uuid(),
-  toWarehouseId: z.string().uuid()
+  boxBarcode: z.string(),
+  destinationLocation: z.string(),
+  reason: z.string().optional()
 });

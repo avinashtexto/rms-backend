@@ -109,4 +109,37 @@ export class RoleService {
       });
     });
   }
+
+  static async deleteRole(companyId: string, roleId: string) {
+    const role = await prisma.role.findFirst({
+      where: { id: roleId, companyId }
+    });
+
+    if (!role) {
+      const error: AppError = new Error('Role not found or cannot delete system roles');
+      error.statusCode = 404;
+      error.code = ErrorCode.ROLE_NOT_FOUND;
+      throw error;
+    }
+
+    const usersCount = await prisma.user.count({
+      where: { roleId }
+    });
+
+    if (usersCount > 0) {
+      const error: AppError = new Error(`Cannot delete role. It is assigned to ${usersCount} users.`);
+      error.statusCode = 400;
+      error.code = ErrorCode.BAD_REQUEST;
+      throw error;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({
+        where: { roleId }
+      });
+      return tx.role.delete({
+        where: { id: roleId }
+      });
+    });
+  }
 }

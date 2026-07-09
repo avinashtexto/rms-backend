@@ -231,4 +231,41 @@ export class FreshBoxMoveService {
 
     return session;
   }
+
+  static async listSessions(companyId: string, page: number = 1, pageSize: number = 20) {
+    const skip = (page - 1) * pageSize;
+    const [sessions, total] = await Promise.all([
+      prisma.freshBoxMoveSession.findMany({
+        where: { operator: { companyId } },
+        include: {
+          operator: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true
+            }
+          },
+          _count: {
+            select: { scans: true }
+          }
+        },
+        orderBy: { startedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.freshBoxMoveSession.count({
+        where: { operator: { companyId } }
+      })
+    ]);
+
+    return {
+      data: sessions,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  }
 }

@@ -1,16 +1,32 @@
 import { Response, NextFunction } from 'express';
 import { WarehouseService } from './warehouse.service';
-import { createWarehouseSchema, updateWarehouseSchema } from './warehouse.validation';
+import { listWarehousesQuerySchema, createWarehouseSchema, updateWarehouseSchema } from './warehouse.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class WarehouseController {
   static async listWarehouses(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const warehouses = await WarehouseService.listWarehouses(companyId);
+      const query = listWarehousesQuerySchema.parse(req.query);
+      const result = await WarehouseService.listWarehouses(companyId, query.page, query.pageSize);
       res.status(200).json({
         success: true,
-        data: warehouses
+        data: result.data,
+        meta: result.meta
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getWarehouseById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const warehouseId = req.params.id as string;
+      const warehouse = await WarehouseService.getWarehouseById(companyId, warehouseId);
+      res.status(200).json({
+        success: true,
+        data: warehouse
       });
     } catch (error) {
       next(error);
@@ -26,8 +42,13 @@ export class WarehouseController {
         data.siteId,
         data.name,
         data.code,
-        data.latitude,
-        data.longitude
+        data.address,
+        data.city,
+        data.state,
+        data.country,
+        data.zipCode,
+        data.phone,
+        data.isActive
       );
       res.status(201).json({
         success: true,
@@ -41,14 +62,20 @@ export class WarehouseController {
   static async updateWarehouse(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const warehouseId = req.params.warehouseId as string;
+      const warehouseId = req.params.id as string;
       const data = updateWarehouseSchema.parse(req.body);
       const warehouse = await WarehouseService.updateWarehouse(
         companyId,
         warehouseId,
+        data.siteId,
         data.name,
-        data.latitude,
-        data.longitude,
+        data.code,
+        data.address,
+        data.city,
+        data.state,
+        data.country,
+        data.zipCode,
+        data.phone,
         data.isActive
       );
       res.status(200).json({
@@ -63,7 +90,7 @@ export class WarehouseController {
   static async deleteWarehouse(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const warehouseId = req.params.warehouseId as string;
+      const warehouseId = req.params.id as string;
       await WarehouseService.deleteWarehouse(companyId, warehouseId);
       res.status(200).json({
         success: true,

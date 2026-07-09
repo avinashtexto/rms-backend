@@ -27,7 +27,7 @@ export class UserController {
   static async getUserById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const userId = req.params.userId as string;
+      const userId = req.params.id as string;
       const user = await UserService.getUserById(companyId, userId);
       res.status(200).json({
         success: true,
@@ -55,7 +55,7 @@ export class UserController {
   static async updateUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const userId = req.params.userId as string;
+      const userId = req.params.id as string;
       const data = updateUserSchema.parse(req.body);
       const user = await UserService.updateUser(companyId, userId, data);
       res.status(200).json({
@@ -70,7 +70,7 @@ export class UserController {
   static async deactivateUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const userId = req.params.userId as string;
+      const userId = req.params.id as string;
       const result = await UserService.deactivateUser(companyId, userId);
       res.status(200).json({
         success: true,
@@ -81,10 +81,24 @@ export class UserController {
     }
   }
 
+  static async deleteUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const userId = req.params.id as string;
+      await UserService.deleteUser(companyId, userId);
+      res.status(200).json({
+        success: true,
+        message: 'User deleted successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async resetPassword(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const userId = req.params.userId as string;
+      const userId = req.params.id as string;
       const data = resetPasswordSchema.parse(req.body);
       const result = await UserService.resetPassword(companyId, userId, data.password);
       res.status(200).json({

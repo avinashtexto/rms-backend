@@ -7,11 +7,37 @@ export class ClientService {
   // CLIENTS
   // ==========================================
   
-  static async listClients(companyId: string) {
-    return prisma.client.findMany({
-      where: { companyId },
-      orderBy: { createdAt: 'desc' }
+  static async listClients(companyId: string, page: number = 1, pageSize: number = 20) {
+    const skip = (page - 1) * pageSize;
+    const [clients, total] = await Promise.all([
+      prisma.client.findMany({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.client.count({ where: { companyId } })
+    ]);
+
+    return {
+      data: clients,
+      meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+    };
+  }
+
+  static async getClientById(companyId: string, clientId: string) {
+    const client = await prisma.client.findFirst({
+      where: { id: clientId, companyId }
     });
+
+    if (!client) {
+      const error: AppError = new Error('Client not found or access denied');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+
+    return client;
   }
 
   static async createClient(

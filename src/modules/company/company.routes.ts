@@ -8,6 +8,7 @@ const router = Router();
 router.use(requireAuth as any);
 
 router.get('/', requirePermission('company:view') as any, CompanyController.listCompanies as any);
+router.get('/:companyId', requirePermission('company:view') as any, CompanyController.getCompany as any);
 router.post('/', requirePermission('company:manage') as any, CompanyController.createCompany as any);
 router.put('/:companyId', requirePermission('company:manage') as any, CompanyController.updateCompany as any);
 router.delete('/:companyId', requirePermission('company:manage') as any, CompanyController.deleteCompany as any);

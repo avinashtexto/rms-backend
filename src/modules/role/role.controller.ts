@@ -34,7 +34,7 @@ export class RoleController {
   static async updateRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const roleId = req.params.roleId as string;
+      const roleId = req.params.id as string;
       const data = updateRoleSchema.parse(req.body);
       const role = await RoleService.updateRole(companyId, roleId, data.label);
       res.status(200).json({
@@ -62,12 +62,26 @@ export class RoleController {
     try {
       const companyId = req.user!.companyId;
       const isSuperAdmin = req.user!.roleName === 'SUPER_ADMIN';
-      const roleId = req.params.roleId as string;
+      const roleId = req.params.id as string;
       const data = assignPermissionsSchema.parse(req.body);
       const result = await RoleService.assignPermissions(companyId, roleId, data.permissionIds, isSuperAdmin);
       res.status(200).json({
         success: true,
         data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const roleId = req.params.id as string;
+      await RoleService.deleteRole(companyId, roleId);
+      res.status(200).json({
+        success: true,
+        message: 'Role deleted successfully'
       });
     } catch (error) {
       next(error);

@@ -80,6 +80,20 @@ export class BoxController {
     }
   }
 
+  static async deleteBox(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const boxId = req.params.boxId as string;
+      await BoxService.deleteBox(companyId, boxId);
+      res.status(200).json({
+        success: true,
+        message: 'Box deleted successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async resolveBoxBarcode(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;

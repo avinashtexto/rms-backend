@@ -87,9 +87,10 @@ export class UserService {
   }
 
   static async createUser(companyId: string, data: any) {
+    const emailLower = data.email.trim().toLowerCase();
     // 1. Check unique email system-wide
     const existingEmail = await prisma.user.findUnique({
-      where: { email: data.email }
+      where: { email: emailLower }
     });
     if (existingEmail) {
       const error: AppError = new Error(`Email '${data.email}' is already registered`);
@@ -123,7 +124,7 @@ export class UserService {
         roleId: data.roleId,
         employeeCode: data.employeeCode,
         fullName: data.fullName,
-        email: data.email,
+        email: emailLower,
         phone: data.phone,
         passwordHash
       },
@@ -208,6 +209,23 @@ export class UserService {
         id: true,
         status: true
       }
+    });
+  }
+
+  static async deleteUser(companyId: string, userId: string) {
+    const user = await prisma.user.findFirst({
+      where: { id: userId, companyId }
+    });
+
+    if (!user) {
+      const error: AppError = new Error('User not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.USER_NOT_FOUND;
+      throw error;
+    }
+
+    return prisma.user.delete({
+      where: { id: userId }
     });
   }
 

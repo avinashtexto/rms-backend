@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
@@ -10,8 +11,9 @@ const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 export class AuthService {
   static async login(email: string, password: string) {
+    console.log('Login attempt details:', { email, passwordLength: password ? password.length : 0 });
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.trim().toLowerCase() },
       include: { role: true }
     });
 
@@ -38,13 +40,13 @@ export class AuthService {
     }
 
     const accessToken = jwt.sign(
-      { userId: user.id, companyId: user.companyId, roleId: user.roleId },
+      { userId: user.id, companyId: user.companyId, roleId: user.roleId, jti: crypto.randomUUID() },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     const refreshTokenString = jwt.sign(
-      { userId: user.id },
+      { userId: user.id, jti: crypto.randomUUID() },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -105,13 +107,13 @@ export class AuthService {
 
     // Generate new pair
     const accessToken = jwt.sign(
-      { userId: savedToken.user.id, companyId: savedToken.user.companyId, roleId: savedToken.user.roleId },
+      { userId: savedToken.user.id, companyId: savedToken.user.companyId, roleId: savedToken.user.roleId, jti: crypto.randomUUID() },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     const newRefreshToken = jwt.sign(
-      { userId: savedToken.user.id },
+      { userId: savedToken.user.id, jti: crypto.randomUUID() },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -228,8 +230,5 @@ export class AuthService {
 
 // Simple deterministic hash for tokens
 function cryptoTokenHash(token: string): string {
-  // Use simple base64 hash or similar in absence of crypto.createHash
-  // For production compatibility, Node.js 'crypto' module is preferred.
-  const crypto = require('crypto');
   return crypto.createHash('sha256').update(token).digest('hex');
 }

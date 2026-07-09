@@ -19,6 +19,7 @@ router.get('/boxes', requirePermission('box:view') as any, BoxController.listBox
 router.get('/boxes/:boxId', requirePermission('box:view') as any, BoxController.getBoxById as any);
 router.post('/boxes', requirePermission('box:manage') as any, BoxController.createBox as any);
 router.put('/boxes/:boxId', requirePermission('box:manage') as any, BoxController.updateBox as any);
+router.delete('/boxes/:boxId', requirePermission('box:manage') as any, BoxController.deleteBox as any);
 
 // File Records nested under boxes
 router.get('/boxes/:boxId/files', requirePermission('file:view') as any, BoxController.listFilesByBox as any);

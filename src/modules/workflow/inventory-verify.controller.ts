@@ -50,4 +50,16 @@ export class InventoryVerifyController {
       next(error);
     }
   }
+
+  static async listSessions(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 20;
+      const sessions = await InventoryVerifyService.listSessions(companyId, page, pageSize);
+      res.status(200).json({ success: true, data: sessions });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -149,6 +149,376 @@
         }
       }
     },
+    "/branches": {
+      "get": {
+        "summary": "List all branches",
+        "description": "Returns a paginated list of branches with search, filter, and sorting capabilities.",
+        "tags": ["Branches"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Page number"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 },
+            "description": "Number of items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Search by name, code, city, or state"
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": { "type": "boolean" },
+            "description": "Filter by active status"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Filter by creation start date"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Filter by creation end date"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["name", "code", "city", "state", "createdAt", "updatedAt"], "default": "createdAt" },
+            "description": "Sort field"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" },
+            "description": "Sort order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of branches with pagination metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "code": { "type": "string" },
+                          "address": { "type": "string" },
+                          "city": { "type": "string" },
+                          "state": { "type": "string" },
+                          "country": { "type": "string" },
+                          "zipCode": { "type": "string" },
+                          "phone": { "type": "string" },
+                          "isActive": { "type": "boolean" },
+                          "createdAt": { "type": "string", "format": "date-time" },
+                          "updatedAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": { "type": "integer" },
+                        "pageSize": { "type": "integer" },
+                        "total": { "type": "integer" },
+                        "totalPages": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new branch",
+        "description": "Creates a new branch for the authenticated user's company.",
+        "tags": ["Branches"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "code"],
+                "properties": {
+                  "name": { "type": "string", "example": "Main Branch" },
+                  "code": { "type": "string", "example": "MAIN" },
+                  "address": { "type": "string", "example": "123 Main St" },
+                  "city": { "type": "string", "example": "New York" },
+                  "state": { "type": "string", "example": "NY" },
+                  "country": { "type": "string", "example": "USA" },
+                  "zipCode": { "type": "string", "example": "10001" },
+                  "phone": { "type": "string", "example": "+1234567890" },
+                  "isActive": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Branch created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "code": { "type": "string" },
+                        "companyId": { "type": "string" },
+                        "isActive": { "type": "boolean" },
+                        "createdAt": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or duplicate code"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          }
+        }
+      }
+    },
+    "/branches/{id}": {
+      "get": {
+        "summary": "Get branch by ID",
+        "description": "Returns detailed information about a specific branch.",
+        "tags": ["Branches"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Branch ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Branch details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "code": { "type": "string" },
+                        "address": { "type": "string" },
+                        "city": { "type": "string" },
+                        "state": { "type": "string" },
+                        "country": { "type": "string" },
+                        "zipCode": { "type": "string" },
+                        "phone": { "type": "string" },
+                        "isActive": { "type": "boolean" },
+                        "createdAt": { "type": "string", "format": "date-time" },
+                        "updatedAt": { "type": "string", "format": "date-time" },
+                        "company": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "code": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Branch not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update branch",
+        "description": "Updates an existing branch's information.",
+        "tags": ["Branches"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Branch ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Updated Branch Name" },
+                  "code": { "type": "string", "example": "UPD" },
+                  "address": { "type": "string", "example": "456 Updated St" },
+                  "city": { "type": "string", "example": "Los Angeles" },
+                  "state": { "type": "string", "example": "CA" },
+                  "country": { "type": "string", "example": "USA" },
+                  "zipCode": { "type": "string", "example": "90001" },
+                  "phone": { "type": "string", "example": "+1987654321" },
+                  "isActive": { "type": "boolean", "example": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Branch updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "code": { "type": "string" },
+                        "isActive": { "type": "boolean" },
+                        "updatedAt": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or duplicate code"
+          },
+          "404": {
+            "description": "Branch not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete branch (soft delete)",
+        "description": "Soft deletes a branch. Fails if branch has dependent sites.",
+        "tags": ["Branches"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Branch ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Branch deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cannot delete - branch has dependencies"
+          },
+          "404": {
+            "description": "Branch not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          }
+        }
+      }
+    },
     "/warehouses": {
       "get": {
         "summary": "List all warehouses",

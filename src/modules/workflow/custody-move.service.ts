@@ -162,13 +162,32 @@ export class CustodyMoveService {
     companyId: string,
     operatorId: string,
     data: {
-      boxId: string;
-      fromWarehouseId: string;
-      toWarehouseId: string;
+      boxBarcode: string;
+      destinationLocation: string;
+      reason?: string;
     }
   ) {
     const box = await prisma.box.findFirst({
-      where: { id: data.boxId, companyId }
+      where: { barcode: data.boxBarcode, companyId },
+      include: {
+        currentLocation: {
+          include: {
+            shelf: {
+              include: {
+                rack: {
+                  include: {
+                    room: {
+                      include: {
+                        warehouse: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!box) {
@@ -178,13 +197,21 @@ export class CustodyMoveService {
       throw error;
     }
 
-    const [fromWh, toWh] = await Promise.all([
-      prisma.warehouse.findFirst({ where: { id: data.fromWarehouseId, companyId } }),
-      prisma.warehouse.findFirst({ where: { id: data.toWarehouseId, companyId } })
-    ]);
+    const sourceWarehouse = box.currentLocation?.shelf?.rack?.room?.warehouse;
+    if (!sourceWarehouse) {
+      const error: AppError = new Error('Source warehouse not found for box location');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
 
-    if (!fromWh || !toWh) {
-      const error: AppError = new Error('One or both warehouses not found or access denied');
+    // Find destination warehouse by name
+    const destinationWarehouse = await prisma.warehouse.findFirst({
+      where: { name: data.destinationLocation, companyId }
+    });
+
+    if (!destinationWarehouse) {
+      const error: AppError = new Error('Destination warehouse not found');
       error.statusCode = 404;
       error.code = ErrorCode.NOT_FOUND;
       throw error;
@@ -194,17 +221,23 @@ export class CustodyMoveService {
       // Create transfer record
       const transfer = await tx.transfer.create({
         data: {
-          boxId: data.boxId,
-          fromWarehouseId: data.fromWarehouseId,
-          toWarehouseId: data.toWarehouseId,
+          boxId: box.id,
+          fromWarehouseId: sourceWarehouse.id,
+          toWarehouseId: destinationWarehouse.id,
           initiatedById: operatorId,
           status: TransferStatus.PENDING_ACCEPTANCE
+        },
+        include: {
+          box: true,
+          fromWarehouse: true,
+          toWarehouse: true,
+          initiatedBy: true
         }
       });
 
       // Update box status to IN_TRANSIT
       await tx.box.update({
-        where: { id: data.boxId },
+        where: { id: box.id },
         data: {
           status: BoxStatus.IN_TRANSIT,
           currentLocationId: null // clear location during transit
@@ -224,15 +257,28 @@ export class CustodyMoveService {
         data: {
           companyId,
           userId: operatorId,
-          boxId: data.boxId,
-          warehouseId: data.fromWarehouseId,
+          boxId: box.id,
+          warehouseId: sourceWarehouse.id,
           action: WorkflowAction.TRANSFER_INITIATE,
           previousState: { status: box.status, locationId: box.currentLocationId },
           newState: { status: BoxStatus.IN_TRANSIT }
         }
       });
 
-      return transfer;
+      return {
+        id: transfer.id,
+        transferCode: `TRF-${transfer.id.substring(0, 8).toUpperCase()}`,
+        boxBarcode: transfer.box.barcode,
+        boxName: transfer.box.description,
+        sourceLocation: transfer.fromWarehouse.name,
+        destinationLocation: transfer.toWarehouse.name,
+        status: transfer.status,
+        reason: data.reason || null,
+        assignedTo: transfer.initiatedBy.fullName,
+        startedAt: transfer.initiatedAt.toISOString(),
+        completedAt: transfer.resolvedAt?.toISOString(),
+        createdAt: transfer.initiatedAt.toISOString()
+      };
     });
   }
 
@@ -293,5 +339,204 @@ export class CustodyMoveService {
 
       return updatedTransfer;
     });
+  }
+
+  static async getAssignedTransfers(companyId: string, operatorId: string) {
+    const transfers = await prisma.transfer.findMany({
+      where: {
+        OR: [
+          { initiatedById: operatorId },
+          { acceptedById: operatorId }
+        ],
+        fromWarehouse: { companyId }
+      },
+      include: {
+        box: {
+          include: {
+            currentLocation: true
+          }
+        },
+        fromWarehouse: true,
+        toWarehouse: true,
+        initiatedBy: true,
+        acceptedBy: true
+      },
+      orderBy: {
+        initiatedAt: 'desc'
+      }
+    });
+
+    return transfers.map(transfer => ({
+      id: transfer.id,
+      transferCode: `TRF-${transfer.id.substring(0, 8).toUpperCase()}`,
+      boxBarcode: transfer.box.barcode,
+      boxName: transfer.box.description,
+      sourceLocation: transfer.fromWarehouse.name,
+      destinationLocation: transfer.toWarehouse.name,
+      status: transfer.status,
+      reason: null,
+      assignedTo: transfer.initiatedBy.fullName,
+      startedAt: transfer.initiatedAt.toISOString(),
+      completedAt: transfer.resolvedAt?.toISOString(),
+      createdAt: transfer.initiatedAt.toISOString()
+    }));
+  }
+
+  static async completeTransfer(companyId: string, operatorId: string, transferId: string) {
+    const transfer = await prisma.transfer.findFirst({
+      where: {
+        id: transferId,
+        fromWarehouse: { companyId }
+      },
+      include: {
+        box: true,
+        fromWarehouse: true,
+        toWarehouse: true,
+        initiatedBy: true
+      }
+    });
+
+    if (!transfer) {
+      const error: AppError = new Error('Transfer request not found or access denied');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+
+    if (transfer.status !== TransferStatus.ACCEPTED) {
+      const error: AppError = new Error('Transfer must be accepted before completion');
+      error.statusCode = 400;
+      error.code = ErrorCode.VALIDATION_ERROR;
+      throw error;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const updatedTransfer = await tx.transfer.update({
+        where: { id: transferId },
+        data: {
+          status: TransferStatus.COMPLETED,
+          resolvedAt: new Date()
+        },
+        include: {
+          box: true,
+          fromWarehouse: true,
+          toWarehouse: true,
+          initiatedBy: true
+        }
+      });
+
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          companyId,
+          userId: operatorId,
+          boxId: transfer.boxId,
+          warehouseId: transfer.toWarehouseId,
+          action: WorkflowAction.TRANSFER_ACCEPT,
+          previousState: { status: TransferStatus.ACCEPTED },
+          newState: { status: TransferStatus.COMPLETED }
+        }
+      });
+
+      return {
+        id: updatedTransfer.id,
+        transferCode: `TRF-${updatedTransfer.id.substring(0, 8).toUpperCase()}`,
+        boxBarcode: updatedTransfer.box.barcode,
+        boxName: updatedTransfer.box.description,
+        sourceLocation: updatedTransfer.fromWarehouse.name,
+        destinationLocation: updatedTransfer.toWarehouse.name,
+        status: updatedTransfer.status,
+        reason: null,
+        assignedTo: updatedTransfer.initiatedBy.fullName,
+        startedAt: updatedTransfer.initiatedAt.toISOString(),
+        completedAt: updatedTransfer.resolvedAt?.toISOString(),
+        createdAt: updatedTransfer.initiatedAt.toISOString()
+      };
+    });
+  }
+
+  static async scanBox(companyId: string, barcode: string) {
+    const box = await prisma.box.findFirst({
+      where: {
+        barcode,
+        companyId
+      },
+      include: {
+        currentLocation: true
+      }
+    });
+
+    if (!box) {
+      return null;
+    }
+
+    // Return a mock transfer object for the scanned box
+    return {
+      id: '',
+      transferCode: '',
+      boxBarcode: box.barcode,
+      boxName: box.description,
+      sourceLocation: box.currentLocation?.name || 'Unknown',
+      destinationLocation: '',
+      status: TransferStatus.PENDING_ACCEPTANCE,
+      reason: null,
+      assignedTo: '',
+      startedAt: null,
+      completedAt: null,
+      createdAt: box.createdAt.toISOString()
+    };
+  }
+
+  static async listTransfers(companyId: string, page: number = 1, pageSize: number = 20) {
+    const skip = (page - 1) * pageSize;
+    const [transfers, total] = await Promise.all([
+      prisma.transfer.findMany({
+        where: { box: { companyId } },
+        include: {
+          box: {
+            select: {
+              id: true,
+              barcode: true,
+              description: true
+            }
+          },
+          fromWarehouse: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          toWarehouse: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          initiatedBy: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { initiatedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.transfer.count({
+        where: { box: { companyId } }
+      })
+    ]);
+
+    return {
+      data: transfers,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
   }
 }

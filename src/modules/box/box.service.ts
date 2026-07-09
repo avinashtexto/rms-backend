@@ -195,6 +195,23 @@ export class BoxService {
     });
   }
 
+  static async deleteBox(companyId: string, boxId: string) {
+    const box = await prisma.box.findFirst({
+      where: { id: boxId, companyId }
+    });
+
+    if (!box) {
+      const error: AppError = new Error('Box not found or access denied');
+      error.statusCode = 404;
+      error.code = ErrorCode.BOX_NOT_FOUND;
+      throw error;
+    }
+
+    return prisma.box.delete({
+      where: { id: boxId }
+    });
+  }
+
   static async resolveBoxBarcode(companyId: string, barcode: string) {
     const box = await prisma.box.findFirst({
       where: { barcode, companyId },

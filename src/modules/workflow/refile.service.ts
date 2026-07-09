@@ -131,4 +131,52 @@ export class RefileService {
       return event;
     });
   }
+
+  static async listRefileScans(companyId: string, page: number = 1, pageSize: number = 20) {
+    const skip = (page - 1) * pageSize;
+    const [scans, total] = await Promise.all([
+      prisma.refileEvent.findMany({
+        where: { fileRecord: { companyId } },
+        include: {
+          fileRecord: {
+            select: {
+              id: true,
+              barcode: true,
+              title: true
+            }
+          },
+          scannedLocation: {
+            select: {
+              id: true,
+              barcode: true,
+              name: true
+            }
+          },
+          expectedBox: {
+            select: {
+              id: true,
+              barcode: true,
+              description: true
+            }
+          }
+        },
+        orderBy: { scannedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.refileEvent.count({
+        where: { fileRecord: { companyId } }
+      })
+    ]);
+
+    return {
+      data: scans,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  }
 }
