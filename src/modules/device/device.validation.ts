@@ -18,8 +18,8 @@ export const updateDeviceSchema = z.object({
   serialNumber: z.string().optional(),
   model: z.string().optional(),
   status: z.nativeEnum(DeviceStatus).optional(),
-  assignedUserId: z.string().optional().transform(val => (val === '' || val === null) ? null : val),
-  userId: z.string().optional().transform(val => (val === '' || val === null) ? null : val),
+  assignedUserId: z.string().nullable().optional().transform(val => (val === '' || val === null) ? null : val),
+  userId: z.string().nullable().optional().transform(val => (val === '' || val === null) ? null : val),
   isActive: z.boolean().optional()
 }).transform((val) => {
   const result: any = {
