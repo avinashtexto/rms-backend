@@ -136,12 +136,13 @@ async function main() {
   const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
-      passwordHash: hashedPassword
+      passwordHash: hashedPassword,
+      employeeCode: 'EMP001'
     },
     create: {
       companyId: company.id,
       roleId: roleMap[RoleName.SUPER_ADMIN],
-      employeeCode: 'EMP-001',
+      employeeCode: 'EMP001',
       fullName: 'System Administrator',
       email: adminEmail,
       status: 'ACTIVE',
@@ -150,6 +151,64 @@ async function main() {
   });
 
   console.log('Created default Super Admin User:', adminUser.email);
+
+  // Seeding Mobile Role Users
+  const managerPassword = await bcrypt.hash('manager123', 10);
+  const managerUser = await prisma.user.upsert({
+    where: { email: 'manager@texto.com' },
+    update: { 
+      passwordHash: managerPassword,
+      employeeCode: 'EMPMGR'
+    },
+    create: {
+      companyId: company.id,
+      roleId: roleMap[RoleName.WAREHOUSE_MANAGER],
+      employeeCode: 'EMPMGR',
+      fullName: 'Warehouse Manager',
+      email: 'manager@texto.com',
+      status: 'ACTIVE',
+      passwordHash: managerPassword
+    }
+  });
+  console.log('Created Warehouse Manager User:', managerUser.email);
+
+  const supervisorPassword = await bcrypt.hash('supervisor123', 10);
+  const supervisorUser = await prisma.user.upsert({
+    where: { email: 'supervisor@texto.com' },
+    update: { 
+      passwordHash: supervisorPassword,
+      employeeCode: 'EMPSUP'
+    },
+    create: {
+      companyId: company.id,
+      roleId: roleMap[RoleName.SUPERVISOR],
+      employeeCode: 'EMPSUP',
+      fullName: 'Shift Supervisor',
+      email: 'supervisor@texto.com',
+      status: 'ACTIVE',
+      passwordHash: supervisorPassword
+    }
+  });
+  console.log('Created Supervisor User:', supervisorUser.email);
+
+  const operatorPassword = await bcrypt.hash('operator123', 10);
+  const operatorUser = await prisma.user.upsert({
+    where: { email: 'operator@texto.com' },
+    update: { 
+      passwordHash: operatorPassword,
+      employeeCode: 'EMPOPR'
+    },
+    create: {
+      companyId: company.id,
+      roleId: roleMap[RoleName.OPERATOR],
+      employeeCode: 'EMPOPR',
+      fullName: 'Floor Operator',
+      email: 'operator@texto.com',
+      status: 'ACTIVE',
+      passwordHash: operatorPassword
+    }
+  });
+  console.log('Created Operator User:', operatorUser.email);
 
   // 5. Create a Default Branch
   const branch = await prisma.branch.upsert({
@@ -267,10 +326,7 @@ async function main() {
   // 11. Create a Default Location
   const location = await prisma.location.upsert({
     where: {
-      shelfId_name: {
-        shelfId: shelf.id,
-        name: 'LOC-01',
-      },
+      barcode: 'LOC-A-1-01',
     },
     update: {},
     create: {

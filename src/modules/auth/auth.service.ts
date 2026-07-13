@@ -10,15 +10,20 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 export class AuthService {
-  static async login(email: string, password: string) {
-    console.log('Login attempt details:', { email, passwordLength: password ? password.length : 0 });
-    const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
+  static async login(identifier: string, password: string) {
+    console.log('Login attempt details:', { identifier, passwordLength: password ? password.length : 0 });
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: identifier.trim().toLowerCase() },
+          { employeeCode: { equals: identifier.trim(), mode: 'insensitive' } }
+        ]
+      },
       include: { role: true }
     });
 
     if (!user) {
-      const error: AppError = new Error('Invalid email or password');
+      const error: AppError = new Error('Invalid username or password');
       error.statusCode = 401;
       error.code = ErrorCode.INVALID_CREDENTIALS;
       throw error;

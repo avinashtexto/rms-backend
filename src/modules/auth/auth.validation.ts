@@ -1,8 +1,12 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email(),
+  email: z.string().trim().optional(),
+  username: z.string().trim().optional(),
   password: z.string().min(6)
+}).refine(data => data.email || data.username, {
+  message: "Either email or username must be provided",
+  path: ["email"]
 });
 
 export const refreshSchema = z.object({

@@ -10,20 +10,29 @@ interface ReportJob {
   companyId: string;
   csvData?: string;
   createdAt: Date;
+  name?: string;
+  description?: string;
 }
 
 // In-memory Job cache tracker
 const reportJobsCache = new Map<string, ReportJob>();
 
 export class ReportService {
-  static async generateReport(companyId: string, type: 'BOX_INVENTORY' | 'USER_WORKLOAD' | 'CUSTODY_HISTORY') {
+  static async generateReport(
+    companyId: string, 
+    type: 'BOX_INVENTORY' | 'USER_WORKLOAD' | 'CUSTODY_HISTORY',
+    name?: string,
+    description?: string
+  ) {
     const jobId = randomUUID();
     const job: ReportJob = {
       id: jobId,
       type,
       status: 'PENDING',
       companyId,
-      createdAt: new Date()
+      createdAt: new Date(),
+      name,
+      description
     };
 
     reportJobsCache.set(jobId, job);
@@ -37,7 +46,9 @@ export class ReportService {
       jobId,
       type,
       status: 'PENDING',
-      createdAt: job.createdAt
+      createdAt: job.createdAt,
+      name: job.name,
+      description: job.description
     };
   }
 
@@ -54,7 +65,9 @@ export class ReportService {
       jobId: job.id,
       type: job.type,
       status: job.status,
-      createdAt: job.createdAt
+      createdAt: job.createdAt,
+      name: job.name,
+      description: job.description
     };
   }
 
@@ -91,9 +104,51 @@ export class ReportService {
         jobId: j.id,
         type: j.type,
         status: j.status,
-        createdAt: j.createdAt
+        createdAt: j.createdAt,
+        name: j.name,
+        description: j.description
       }));
     return list;
+  }
+
+  static async updateReport(companyId: string, jobId: string, name?: string, description?: string) {
+    const job = reportJobsCache.get(jobId);
+    if (!job || job.companyId !== companyId) {
+      const error: AppError = new Error('Report job not found or access denied');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+
+    const updated: ReportJob = {
+      ...job,
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+    };
+
+    reportJobsCache.set(jobId, updated);
+
+    return {
+      jobId: updated.id,
+      type: updated.type,
+      status: updated.status,
+      createdAt: updated.createdAt,
+      name: updated.name,
+      description: updated.description
+    };
+  }
+
+  static async deleteReport(companyId: string, jobId: string) {
+    const job = reportJobsCache.get(jobId);
+    if (!job || job.companyId !== companyId) {
+      const error: AppError = new Error('Report job not found or access denied');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+
+    reportJobsCache.delete(jobId);
+    return { success: true };
   }
 
   // Private async processor

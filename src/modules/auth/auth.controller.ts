@@ -7,7 +7,30 @@ export class AuthController {
   static async login(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = loginSchema.parse(req.body);
-      const result = await AuthService.login(data.email, data.password);
+      const email = data.email || data.username;
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Email or username is required'
+          }
+        });
+      }
+      const result = await AuthService.login(email, data.password);
+      
+      // Restrict admin login on mobile endpoints
+      const isMobile = req.originalUrl.includes('/mobile/');
+      if (isMobile && (result.user.role === 'SUPER_ADMIN' || result.user.role === 'COMPANY_ADMIN')) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Administrators must log in via the web admin panel.'
+          }
+        });
+      }
+
       res.status(200).json({
         success: true,
         data: result

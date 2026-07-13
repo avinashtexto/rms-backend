@@ -66,6 +66,6 @@ adminRouter.use('/workflows/custody-move', custodyMoveRoutes);
 // Shared/root-level modules (storage, box, settings define their own sub-paths)
 adminRouter.use('/', storageRoutes);
 adminRouter.use('/', boxRoutes);
-adminRouter.use('/', settingRoutes);
+adminRouter.use('/settings', settingRoutes); // Mount settings route at /settings
 
 export default adminRouter;

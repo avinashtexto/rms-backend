@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { ReportService } from './report.service';
-import { generateReportSchema } from './report.validation';
+import { generateReportSchema, updateReportSchema } from './report.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class ReportController {
@@ -8,7 +8,7 @@ export class ReportController {
     try {
       const companyId = req.user!.companyId;
       const data = generateReportSchema.parse(req.body);
-      const result = await ReportService.generateReport(companyId, data.type);
+      const result = await ReportService.generateReport(companyId, data.type, data.name, data.description);
       res.status(202).json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -45,6 +45,29 @@ export class ReportController {
       const companyId = req.user!.companyId;
       const reports = await ReportService.listReports(companyId);
       res.status(200).json({ success: true, data: reports });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateReport(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const jobId = req.params.jobId as string;
+      const data = updateReportSchema.parse(req.body);
+      const report = await ReportService.updateReport(companyId, jobId, data.name, data.description);
+      res.status(200).json({ success: true, data: report });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteReport(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const jobId = req.params.jobId as string;
+      await ReportService.deleteReport(companyId, jobId);
+      res.status(200).json({ success: true, message: 'Report deleted successfully' });
     } catch (error) {
       next(error);
     }

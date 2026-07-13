@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authRoutes from '../modules/auth/auth.routes';
+import splashRoutes from '../modules/splash/splash.routes';
 import freshBoxMoveRoutes from '../modules/workflow/fresh-box-move.routes';
 import inventoryVerifyRoutes from '../modules/workflow/inventory-verify.routes';
 import refileRoutes from '../modules/workflow/refile.routes';
@@ -14,6 +15,7 @@ const mobileRouter = Router();
 
 // Mount mobile-specific route groups
 mobileRouter.use('/auth', authRoutes);
+mobileRouter.use('/splash', splashRoutes);
 mobileRouter.use('/workflows/fresh-box-move', freshBoxMoveRoutes);
 mobileRouter.use('/workflows/inventory-verify', inventoryVerifyRoutes);
 mobileRouter.use('/workflows/refile', refileRoutes);
