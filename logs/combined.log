@@ -2130,3 +2130,85 @@
 {"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 12ms","service":"rms-api","timestamp":"2026-07-21 12:58:44"}
 {"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/login - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-21 12:59:47"}
 {"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/auth/login - Duration: 12ms","service":"rms-api","timestamp":"2026-07-21 12:59:47"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/login - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-21 13:01:17"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/auth/login - Duration: 122ms","service":"rms-api","timestamp":"2026-07-21 13:01:17"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/login - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-21 13:01:22"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/mobile/auth/login - Duration: 248ms","service":"rms-api","timestamp":"2026-07-21 13:01:22"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-21 13:01:36"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - Duration: 154ms","service":"rms-api","timestamp":"2026-07-21 13:01:36"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:09:11"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 106ms","service":"rms-api","timestamp":"2026-07-21 13:09:11"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:09:11"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 37ms","service":"rms-api","timestamp":"2026-07-21 13:09:12"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=5085191 - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:10:29"}
+{"level":"info","message":"Response Status: 404 for GET /api/v1/mobile/scan/lookup?barcode=5085191 - Duration: 126ms","service":"rms-api","timestamp":"2026-07-21 13:10:29"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:15:20"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-21 13:15:20"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - Duration: 19ms","service":"rms-api","timestamp":"2026-07-21 13:15:20"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/refresh - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:15:20"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/mobile/auth/refresh - Duration: 74ms","service":"rms-api","timestamp":"2026-07-21 13:15:20"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:15:20"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - Duration: 96ms","service":"rms-api","timestamp":"2026-07-21 13:15:21"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:15:21"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 33ms","service":"rms-api","timestamp":"2026-07-21 13:15:21"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:22:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 47ms","service":"rms-api","timestamp":"2026-07-21 13:22:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:22:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 8ms","service":"rms-api","timestamp":"2026-07-21 13:22:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:22:51"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - Duration: 129ms","service":"rms-api","timestamp":"2026-07-21 13:22:51"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 13:22:51"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 10ms","service":"rms-api","timestamp":"2026-07-21 13:22:51"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 8ms","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=7 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard/scan-activity?days=7 - Duration: 8ms","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/metrics - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-21 13:23:56"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard/metrics - Duration: 63ms","service":"rms-api","timestamp":"2026-07-21 13:23:57"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/recent-activity?limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:23:57"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-21 13:23:57"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard/recent-activity?limit=5 - Duration: 2ms","service":"rms-api","timestamp":"2026-07-21 13:23:57"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:24:05"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 96ms","service":"rms-api","timestamp":"2026-07-21 13:24:05"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:24:07"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 10ms","service":"rms-api","timestamp":"2026-07-21 13:24:07"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:24:46"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 51ms","service":"rms-api","timestamp":"2026-07-21 13:24:46"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:24:47"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 46ms","service":"rms-api","timestamp":"2026-07-21 13:24:47"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:24:57"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 26ms","service":"rms-api","timestamp":"2026-07-21 13:24:57"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:25:10"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-21 13:25:10"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/auth/login - Duration: 18ms","service":"rms-api","timestamp":"2026-07-21 13:25:10"}
+{"level":"info","message":"Incoming Request: GET /favicon.ico - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:25:11"}
+{"level":"info","message":"Response Status: 404 for GET /favicon.ico - Duration: 31ms","service":"rms-api","timestamp":"2026-07-21 13:25:11"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-21 13:27:59"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/admin/auth/login - Duration: 311ms","service":"rms-api","timestamp":"2026-07-21 13:27:59"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:29"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 22ms","service":"rms-api","timestamp":"2026-07-21 13:28:29"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:30"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/admin/auth/login - Duration: 24ms","service":"rms-api","timestamp":"2026-07-21 13:28:30"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/login - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:41"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/admin/auth/login - Duration: 162ms","service":"rms-api","timestamp":"2026-07-21 13:28:41"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:42"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 202ms","service":"rms-api","timestamp":"2026-07-21 13:28:42"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/companies?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:53"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/companies?page=1&pageSize=20 - Duration: 131ms","service":"rms-api","timestamp":"2026-07-21 13:28:53"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/warehouses?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:59"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/sites?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:28:59"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/sites?page=1&pageSize=100 - Duration: 78ms","service":"rms-api","timestamp":"2026-07-21 13:28:59"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/warehouses?page=1&pageSize=20 - Duration: 86ms","service":"rms-api","timestamp":"2026-07-21 13:28:59"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/branches?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:29:36"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/branches?page=1&pageSize=20 - Duration: 82ms","service":"rms-api","timestamp":"2026-07-21 13:29:36"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/sites?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:29:40"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/branches?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:29:40"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/branches?page=1&pageSize=100 - Duration: 23ms","service":"rms-api","timestamp":"2026-07-21 13:29:40"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/sites?page=1&pageSize=20 - Duration: 27ms","service":"rms-api","timestamp":"2026-07-21 13:29:40"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/warehouses?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:30:21"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/warehouses?page=1&pageSize=100 - Duration: 100ms","service":"rms-api","timestamp":"2026-07-21 13:30:21"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/warehouses/5c5f36d5-231a-400e-9465-1f278f12db04/rooms?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-21 13:30:21"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/warehouses/5c5f36d5-231a-400e-9465-1f278f12db04/rooms?page=1&pageSize=20 - Duration: 34ms","service":"rms-api","timestamp":"2026-07-21 13:30:21"}
