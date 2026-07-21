@@ -53,7 +53,8 @@ export class BoxController {
         data.clientId,
         data.departmentId,
         data.barcode,
-        data.description
+        data.description,
+        data.capacity
       );
       res.status(201).json({ success: true, data: box });
     } catch (error) {
@@ -72,7 +73,8 @@ export class BoxController {
         data.clientId,
         data.departmentId,
         data.description,
-        data.status
+        data.status,
+        data.capacity
       );
       res.status(200).json({ success: true, data: box });
     } catch (error) {

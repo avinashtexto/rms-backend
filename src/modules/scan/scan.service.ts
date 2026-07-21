@@ -145,8 +145,8 @@ export class ScanService {
           code: box.barcode,
           label: box.description,
           status: box.status,
-          capacity: null,
-          occupied: null,
+          capacity: box.capacity,
+          occupied: box._count.fileRecords,
           locationBarcode: box.currentLocation?.barcode || null
         },
         contents: files.map(file => ({

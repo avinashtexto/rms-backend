@@ -84,7 +84,8 @@ export class BoxService {
     clientId: string,
     departmentId?: string | null,
     barcode?: string,
-    description?: string | null
+    description?: string | null,
+    capacity?: number | null
   ) {
     // Verify client belongs to current company
     const client = await prisma.client.findFirst({
@@ -133,7 +134,8 @@ export class BoxService {
         clientId,
         departmentId,
         barcode: finalBarcode,
-        description
+        description,
+        capacity: capacity !== undefined ? capacity : 25
       }
     });
   }
@@ -144,7 +146,8 @@ export class BoxService {
     clientId?: string,
     departmentId?: string | null,
     description?: string | null,
-    status?: BoxStatus
+    status?: BoxStatus,
+    capacity?: number | null
   ) {
     const box = await prisma.box.findFirst({
       where: { id: boxId, companyId }
@@ -190,7 +193,8 @@ export class BoxService {
         clientId: clientId !== undefined ? clientId : box.clientId,
         departmentId: departmentId !== undefined ? departmentId : box.departmentId,
         description: description !== undefined ? description : box.description,
-        status: status !== undefined ? status : box.status
+        status: status !== undefined ? status : box.status,
+        capacity: capacity !== undefined ? capacity : box.capacity
       }
     });
   }

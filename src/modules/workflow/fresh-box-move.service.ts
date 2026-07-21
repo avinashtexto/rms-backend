@@ -108,6 +108,25 @@ export class FreshBoxMoveService {
       throw error;
     }
 
+    // 4b. Capacity enforcement — a Location holds exactly one active Box
+    // (Box.currentLocationId is unique at the schema level). Re-scanning the
+    // SAME box into its own current location is a harmless re-confirmation;
+    // placing a DIFFERENT box into an already-occupied location is rejected
+    // outright rather than silently overwriting the prior occupant.
+    if (location.isOccupied) {
+      const occupyingBox = await prisma.box.findFirst({
+        where: { currentLocationId: location.id, status: 'ACTIVE' }
+      });
+      if (occupyingBox && occupyingBox.id !== box.id) {
+        const error: AppError = new Error(
+          `Location '${data.locationBarcode}' is already occupied by box '${occupyingBox.barcode}'`
+        );
+        error.statusCode = 409;
+        error.code = ErrorCode.LOCATION_OCCUPIED;
+        throw error;
+      }
+    }
+
     const previousLocationId = box.currentLocationId;
 
     // 5. Execute state changes inside a transaction
@@ -333,8 +352,11 @@ export class FreshBoxMoveService {
       throw error;
     }
 
-    // Check capacity and prepare warnings
-    const currentBoxes = await prisma.box.count({
+    // Capacity enforcement — a Location holds exactly one active Box. Reject
+    // outright (don't just warn-and-proceed) if this batch would place more
+    // than one box there, or if it's already occupied by a different box
+    // than the one(s) being submitted.
+    const occupyingBoxes = await prisma.box.findMany({
       where: {
         currentLocationId: location.id,
         companyId,
@@ -342,14 +364,28 @@ export class FreshBoxMoveService {
       }
     });
 
-    const warnings: { code: string; message: string; barcode?: string }[] = [];
-    if (currentBoxes + data.boxBarcodes.length > 1) {
-      warnings.push({
-        code: 'CAPACITY_EXCEEDED',
-        message: 'More than 1 box at this location',
-        barcode: data.locationBarcode
-      });
+    const incomingBarcodeSet = new Set(data.boxBarcodes);
+    const foreignOccupant = occupyingBoxes.find(b => !incomingBarcodeSet.has(b.barcode));
+
+    if (foreignOccupant) {
+      const error: AppError = new Error(
+        `Location '${data.locationBarcode}' is already occupied by box '${foreignOccupant.barcode}'`
+      );
+      error.statusCode = 409;
+      error.code = ErrorCode.LOCATION_OCCUPIED;
+      throw error;
     }
+
+    if (data.boxBarcodes.length > 1) {
+      const error: AppError = new Error(
+        `Location '${data.locationBarcode}' can only hold one box — ${data.boxBarcodes.length} were submitted in this batch`
+      );
+      error.statusCode = 409;
+      error.code = ErrorCode.LOCATION_OCCUPIED;
+      throw error;
+    }
+
+    const warnings: { code: string; message: string; barcode?: string }[] = [];
 
     // Process box moves in a transaction
     const result = await prisma.$transaction(async (tx) => {

@@ -33,7 +33,7 @@ export class RoomController {
   static async createRoom(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = createRoomSchema.parse(req.body);
-      const room = await RoomService.createRoom(data.warehouseId, data.name, data.code);
+      const room = await RoomService.createRoom(data.warehouseId, data.name, data.code, data.description);
       res.status(201).json({
         success: true,
         data: room
@@ -47,7 +47,14 @@ export class RoomController {
     try {
       const roomId = req.params.id as string;
       const data = updateRoomSchema.parse(req.body);
-      const room = await RoomService.updateRoom(roomId, data.name, data.isActive);
+      const room = await RoomService.updateRoom(
+        roomId,
+        data.name,
+        data.isActive,
+        data.description,
+        data.warehouseId,
+        data.code
+      );
       res.status(200).json({
         success: true,
         data: room

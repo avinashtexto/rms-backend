@@ -5,14 +5,16 @@ export const createBoxSchema = z.object({
   clientId: z.string().uuid(),
   departmentId: z.string().uuid().optional().nullable(),
   barcode: z.string().min(1).optional(), // optional, auto-generated if omitted
-  description: z.string().optional().nullable()
+  description: z.string().optional().nullable(),
+  capacity: z.number().int().min(1).optional().nullable()
 });
 
 export const updateBoxSchema = z.object({
   clientId: z.string().uuid().optional(),
   departmentId: z.string().uuid().optional().nullable(),
   description: z.string().optional().nullable(),
-  status: z.nativeEnum(BoxStatus).optional()
+  status: z.nativeEnum(BoxStatus).optional(),
+  capacity: z.number().int().min(1).optional().nullable()
 });
 
 export const createFileRecordSchema = z.object({

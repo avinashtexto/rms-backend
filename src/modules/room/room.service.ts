@@ -31,7 +31,7 @@ export class RoomService {
     return room;
   }
 
-  static async createRoom(warehouseId: string, name: string, code: string) {
+  static async createRoom(warehouseId: string, name: string, code: string, description?: string) {
     const warehouse = await prisma.warehouse.findUnique({
       where: { id: warehouseId }
     });
@@ -55,14 +55,21 @@ export class RoomService {
     }
 
     return prisma.room.create({
-      data: { warehouseId, name, code },
+      data: { warehouseId, name, code, description },
       include: {
         warehouse: true
       }
     });
   }
 
-  static async updateRoom(id: string, name?: string, isActive?: boolean) {
+  static async updateRoom(
+    id: string,
+    name?: string,
+    isActive?: boolean,
+    description?: string,
+    warehouseId?: string,
+    code?: string
+  ) {
     const room = await prisma.room.findUnique({
       where: { id }
     });
@@ -74,10 +81,42 @@ export class RoomService {
       throw error;
     }
 
+    const newWarehouseId = warehouseId !== undefined ? warehouseId : room.warehouseId;
+    const newCode = code !== undefined ? code.toUpperCase() : room.code;
+
+    if (newWarehouseId !== room.warehouseId || newCode !== room.code) {
+      const warehouse = await prisma.warehouse.findUnique({
+        where: { id: newWarehouseId }
+      });
+      if (!warehouse) {
+        const error: AppError = new Error('Warehouse not found');
+        error.statusCode = 404;
+        error.code = ErrorCode.WAREHOUSE_NOT_FOUND;
+        throw error;
+      }
+
+      const existing = await prisma.room.findFirst({
+        where: {
+          warehouseId: newWarehouseId,
+          code: newCode,
+          id: { not: id }
+        }
+      });
+      if (existing) {
+        const error: AppError = new Error(`Room code '${newCode}' is already taken for this warehouse`);
+        error.statusCode = 400;
+        error.code = ErrorCode.DUPLICATE_CODE;
+        throw error;
+      }
+    }
+
     return prisma.room.update({
       where: { id },
       data: {
+        warehouseId: newWarehouseId,
         name: name !== undefined ? name : room.name,
+        code: newCode,
+        description: description !== undefined ? description : room.description,
         isActive: isActive !== undefined ? isActive : room.isActive
       },
       include: {
