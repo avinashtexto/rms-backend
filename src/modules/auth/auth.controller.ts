@@ -17,16 +17,43 @@ export class AuthController {
           }
         });
       }
-      const result = await AuthService.login(email, data.password);
+
+      // Check if this is a mobile login and enforce device validation
+      const isMobile = req.originalUrl.includes('/mobile/');
+      if (isMobile) {
+        // For mobile roles, device information is required
+        if (!data.device) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'Device information is required for mobile login'
+            }
+          });
+        }
+      }
+
+      const result = await AuthService.login(email, data.password, data.device);
       
       // Restrict admin login on mobile endpoints
-      const isMobile = req.originalUrl.includes('/mobile/');
       if (isMobile && (result.user.role === 'SUPER_ADMIN' || result.user.role === 'COMPANY_ADMIN')) {
         return res.status(403).json({
           success: false,
           error: {
             code: 'UNAUTHORIZED',
             message: 'Administrators must log in via the web admin panel.'
+          }
+        });
+      }
+
+      // Restrict non-admin login on admin endpoints
+      const isAdmin = req.originalUrl.includes('/admin/');
+      if (isAdmin && (result.user.role !== 'SUPER_ADMIN' && result.user.role !== 'COMPANY_ADMIN')) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Admin roles only.'
           }
         });
       }

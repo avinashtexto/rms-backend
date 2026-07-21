@@ -5,6 +5,9 @@ import { requirePermission } from '../../middleware/rbac.middleware';
 
 const router = Router();
 
+// Public: no auth required — used by the mobile login screen to populate the site picker
+router.get('/public', SiteController.listPublicSites as any);
+
 router.use(requireAuth as any);
 
 router.get('/', requirePermission('site:view') as any, SiteController.listSites as any);

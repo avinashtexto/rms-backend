@@ -4,6 +4,16 @@ import { listSitesQuerySchema, createSiteSchema, updateSiteSchema } from './site
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class SiteController {
+  /** Public — no auth. Returns active sites for use in the mobile login screen site picker. */
+  static async listPublicSites(req: any, res: Response, next: NextFunction) {
+    try {
+      const sites = await SiteService.listAllActiveSites();
+      res.status(200).json({ success: true, data: sites });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async listSites(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;

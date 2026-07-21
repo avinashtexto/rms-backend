@@ -10,7 +10,7 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 export class AuthService {
-  static async login(identifier: string, password: string) {
+  static async login(identifier: string, password: string, device?: { serialNumber: string; model: string; appVersion: string }) {
     console.log('Login attempt details:', { identifier, passwordLength: password ? password.length : 0 });
     const user = await prisma.user.findFirst({
       where: {
@@ -68,14 +68,50 @@ export class AuthService {
       }
     });
 
+    // Get user permissions and warehouses
+    const permissions = await prisma.rolePermission.findMany({
+      where: { roleId: user.roleId },
+      include: { permission: true }
+    });
+
+    const warehouses = await prisma.warehouse.findMany({
+      where: { companyId: user.companyId, isActive: true }
+    });
+
+    // Create or update device record if provided
+    let deviceId = null;
+    if (device) {
+      const deviceRecord = await prisma.device.upsert({
+        where: { serialNumber: device.serialNumber },
+        update: {
+          model: device.model,
+          lastSeenAt: new Date()
+        },
+        create: {
+          serialNumber: device.serialNumber,
+          model: device.model,
+          companyId: user.companyId,
+          lastSeenAt: new Date()
+        }
+      });
+      deviceId = deviceRecord.id;
+    }
+
     return {
       accessToken,
       refreshToken: refreshTokenString,
+      deviceId,
       user: {
         id: user.id,
+        username: user.email, // Using email as username for mobile
         fullName: user.fullName,
-        email: user.email,
-        role: user.role.name
+        role: user.role.name,
+        permissions: permissions.map(rp => rp.permission.key),
+        warehouses: warehouses.map(w => ({
+          id: w.id,
+          code: w.code,
+          name: w.name
+        }))
       }
     };
   }

@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { FreshBoxMoveService } from './fresh-box-move.service';
-import { startSessionSchema, submitScanSchema } from './fresh-box-move.validation';
+import { startSessionSchema, submitScanSchema, freshBoxMoveSchema } from './fresh-box-move.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class FreshBoxMoveController {
@@ -21,7 +21,14 @@ export class FreshBoxMoveController {
       const operatorId = req.user!.id;
       const sessionId = req.params.sessionId as string;
       const data = submitScanSchema.parse(req.body);
-      const scan = await FreshBoxMoveService.submitScan(companyId, operatorId, sessionId, data);
+      const scan = await FreshBoxMoveService.submitScan(companyId, operatorId, sessionId, {
+        locationBarcode: data.locationBarcode,
+        boxBarcode: data.boxBarcode,
+        clientEventId: data.clientOpId, // Map clientOpId to clientEventId for service
+        gpsLat: data.latitude,
+        gpsLng: data.longitude,
+        scannedAt: data.scannedAt ? new Date(data.scannedAt) : new Date()
+      });
       res.status(201).json({ success: true, data: scan });
     } catch (error) {
       next(error);
@@ -57,6 +64,18 @@ export class FreshBoxMoveController {
       const pageSize = parseInt(req.query.pageSize as string) || 20;
       const sessions = await FreshBoxMoveService.listSessions(companyId, page, pageSize);
       res.status(200).json({ success: true, data: sessions });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async submitWorkflow(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const operatorId = req.user!.id;
+      const data = freshBoxMoveSchema.parse(req.body);
+      const result = await FreshBoxMoveService.submitWorkflow(companyId, operatorId, data);
+      res.status(201).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

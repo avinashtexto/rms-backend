@@ -1,9 +1,16 @@
 import { z } from 'zod';
 
+export const deviceSchema = z.object({
+  serialNumber: z.string().min(1),
+  model: z.string().min(1),
+  appVersion: z.string().min(1)
+});
+
 export const loginSchema = z.object({
   email: z.string().trim().optional(),
   username: z.string().trim().optional(),
-  password: z.string().min(6)
+  password: z.string().min(6),
+  device: deviceSchema.optional()
 }).refine(data => data.email || data.username, {
   message: "Either email or username must be provided",
   path: ["email"]

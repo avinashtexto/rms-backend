@@ -3,6 +3,15 @@ import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 
 export class SiteService {
+  /** Public method — no company scoping. Returns id + name of every active site for the login dropdown. */
+  static async listAllActiveSites() {
+    return prisma.site.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: 'asc' }
+    });
+  }
+
   static async listSites(companyId: string, page: number = 1, pageSize: number = 20) {
     const skip = (page - 1) * pageSize;
     const [sites, total] = await Promise.all([

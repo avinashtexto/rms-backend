@@ -127,6 +127,31 @@ async function main() {
         });
       }
     }
+
+    // Assign workflow permissions to mobile roles
+    if (roleData.name === RoleName.OPERATOR || roleData.name === RoleName.SUPERVISOR || roleData.name === RoleName.WAREHOUSE_MANAGER) {
+      const workflowPermissions = dbPermissions.filter(p => 
+        p.key.startsWith('workflow:') || 
+        p.key.startsWith('box:view') || 
+        p.key.startsWith('file:view') || 
+        p.key.startsWith('warehouse:view')
+      );
+      for (const perm of workflowPermissions) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: perm.id
+            }
+          },
+          update: {},
+          create: {
+            roleId: role.id,
+            permissionId: perm.id
+          }
+        });
+      }
+    }
   }
 
   // 4. Create default Super Admin User

@@ -268,4 +268,165 @@ export class FreshBoxMoveService {
       }
     };
   }
+
+  static async submitWorkflow(
+    companyId: string,
+    operatorId: string,
+    data: {
+      clientOpId: string;
+      performedAt?: string;
+      latitude?: number;
+      longitude?: number;
+      locationBarcode: string;
+      boxBarcodes: string[];
+    }
+  ) {
+    // Check for idempotency - if this clientOpId already exists, return duplicate:true
+    // Note: Since AuditLog doesn't have clientOpId, we'll use a simpler approach
+    // In a real implementation, you'd want a separate table for operation tracking
+    const existingOperation = await prisma.auditLog.findFirst({
+      where: {
+        action: 'FRESH_BOX_MOVE',
+        userId: operatorId,
+        createdAt: {
+          gte: new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes
+        }
+      }
+    });
+
+    if (existingOperation && existingOperation.newState && 
+        typeof existingOperation.newState === 'object' && 
+        'clientOpId' in existingOperation.newState &&
+        existingOperation.newState.clientOpId === data.clientOpId) {
+      return {
+        operationId: existingOperation.id,
+        duplicate: true,
+        warnings: [],
+        summary: {
+          moved: data.boxBarcodes.length,
+          warnings: []
+        }
+      };
+    }
+
+    // Find the location
+    const location = await prisma.location.findFirst({
+      where: {
+        barcode: data.locationBarcode,
+        shelf: {
+          rack: {
+            room: {
+              warehouse: {
+                companyId,
+                isActive: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!location) {
+      const error: AppError = new Error(`Location barcode '${data.locationBarcode}' not found`);
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+
+    // Check capacity and prepare warnings
+    const currentBoxes = await prisma.box.count({
+      where: {
+        currentLocationId: location.id,
+        companyId,
+        status: 'ACTIVE'
+      }
+    });
+
+    const warnings: { code: string; message: string; barcode?: string }[] = [];
+    if (currentBoxes + data.boxBarcodes.length > 1) {
+      warnings.push({
+        code: 'CAPACITY_EXCEEDED',
+        message: 'More than 1 box at this location',
+        barcode: data.locationBarcode
+      });
+    }
+
+    // Process box moves in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const movedBoxes: any[] = [];
+      const duplicateBoxes: { barcode: string }[] = [];
+
+      for (const boxBarcode of data.boxBarcodes) {
+        // Check if box was already processed in this operation
+        if (movedBoxes.some(b => b.barcode === boxBarcode) || duplicateBoxes.some(b => b.barcode === boxBarcode)) {
+          duplicateBoxes.push({ barcode: boxBarcode });
+          continue;
+        }
+
+        const box = await prisma.box.findFirst({
+          where: {
+            barcode: boxBarcode,
+            companyId,
+            status: 'ACTIVE'
+          }
+        });
+
+        if (!box) {
+          const error: AppError = new Error(`Box barcode '${boxBarcode}' not found`);
+          error.statusCode = 404;
+          error.code = ErrorCode.NOT_FOUND;
+          throw error;
+        }
+
+        // Move the box
+        await tx.box.update({
+          where: { id: box.id },
+          data: { currentLocationId: location.id }
+        });
+
+        await tx.location.update({
+          where: { id: location.id },
+          data: { isOccupied: true }
+        });
+
+        movedBoxes.push(box);
+      }
+
+      // Create audit log
+      const auditLog = await tx.auditLog.create({
+        data: {
+          companyId,
+          userId: operatorId,
+          action: 'FRESH_BOX_MOVE',
+          boxId: movedBoxes[0]?.id || null,
+          locationId: location.id,
+          previousState: undefined,
+          newState: {
+            clientOpId: data.clientOpId,
+            locationBarcode: data.locationBarcode,
+            boxBarcodes: data.boxBarcodes,
+            movedBoxes: movedBoxes.map(b => b.barcode),
+            duplicateBoxes: duplicateBoxes.map(b => b.barcode),
+            warnings
+          },
+          gpsLat: data.latitude,
+          gpsLng: data.longitude,
+          createdAt: data.performedAt ? new Date(data.performedAt) : new Date()
+        }
+      });
+
+      return {
+        operationId: auditLog.id,
+        duplicate: false,
+        warnings,
+        summary: {
+          moved: movedBoxes.length,
+          duplicate: duplicateBoxes.length,
+          warnings: warnings.length
+        }
+      };
+    });
+
+    return result;
+  }
 }
