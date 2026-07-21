@@ -2119,3 +2119,14 @@
 {"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 11ms","service":"rms-api","timestamp":"2026-07-21 12:47:17"}
 {"level":"info","message":"Incoming Request: GET /api/v1/mobile/sites/public - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 12:52:04"}
 {"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/sites/public - Duration: 254ms","service":"rms-api","timestamp":"2026-07-21 12:52:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 12:58:43"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-21 12:58:43"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/dashboard/stats - Duration: 76ms","service":"rms-api","timestamp":"2026-07-21 12:58:43"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/refresh - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 12:58:43"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/mobile/auth/refresh - Duration: 229ms","service":"rms-api","timestamp":"2026-07-21 12:58:44"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 12:58:44"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 14ms","service":"rms-api","timestamp":"2026-07-21 12:58:44"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 12:58:44"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 12ms","service":"rms-api","timestamp":"2026-07-21 12:58:44"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/login - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-21 12:59:47"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/auth/login - Duration: 12ms","service":"rms-api","timestamp":"2026-07-21 12:59:47"}
