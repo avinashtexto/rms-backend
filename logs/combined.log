@@ -2808,3 +2808,229 @@
 {"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 2186ms","service":"rms-api","timestamp":"2026-07-21 16:46:05"}
 {"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:46:05"}
 {"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 2767ms","service":"rms-api","timestamp":"2026-07-21 16:46:08"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:09"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-21 16:57:09"}
+{"level":"info","message":"Response Status: 401 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 54ms","service":"rms-api","timestamp":"2026-07-21 16:57:09"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/refresh - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:10"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/mobile/auth/refresh - Duration: 291ms","service":"rms-api","timestamp":"2026-07-21 16:57:10"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:10"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 405ms","service":"rms-api","timestamp":"2026-07-21 16:57:10"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 21ms","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 20ms","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 11ms","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 6ms","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 42ms","service":"rms-api","timestamp":"2026-07-21 16:57:11"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:12"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 14ms","service":"rms-api","timestamp":"2026-07-21 16:57:12"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:12"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 22ms","service":"rms-api","timestamp":"2026-07-21 16:57:12"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.12 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-21 16:57:12"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 10ms","service":"rms-api","timestamp":"2026-07-21 16:57:12"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:41:18"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 10:41:18"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 82ms","service":"rms-api","timestamp":"2026-07-24 10:41:18"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/refresh - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:41:18"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=7 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard/scan-activity?days=7 - Duration: 3ms","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/admin/auth/refresh - Duration: 806ms","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=7 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard/scan-activity?days=7 - Duration: 211ms","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 236ms","service":"rms-api","timestamp":"2026-07-24 10:41:19"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/companies?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:00"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/companies?page=1&pageSize=20 - Duration: 146ms","service":"rms-api","timestamp":"2026-07-24 10:43:00"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=7 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:03"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:03"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard/scan-activity?days=7 - Duration: 51ms","service":"rms-api","timestamp":"2026-07-24 10:43:03"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 65ms","service":"rms-api","timestamp":"2026-07-24 10:43:03"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=30 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:06"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard/scan-activity?days=30 - Duration: 58ms","service":"rms-api","timestamp":"2026-07-24 10:43:06"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=90 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard/scan-activity?days=90 - Duration: 58ms","service":"rms-api","timestamp":"2026-07-24 10:43:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/audit-logs?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:20"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/audit-logs?page=1&pageSize=20 - Duration: 106ms","service":"rms-api","timestamp":"2026-07-24 10:43:20"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/warehouses?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:26"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/sites?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:26"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/warehouses?page=1&pageSize=20 - Duration: 86ms","service":"rms-api","timestamp":"2026-07-24 10:43:26"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/sites?page=1&pageSize=100 - Duration: 83ms","service":"rms-api","timestamp":"2026-07-24 10:43:26"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/branches?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:38"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/branches?page=1&pageSize=20 - Duration: 95ms","service":"rms-api","timestamp":"2026-07-24 10:43:38"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/sites?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:42"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/branches?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 10:43:42"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/branches?page=1&pageSize=100 - Duration: 56ms","service":"rms-api","timestamp":"2026-07-24 10:43:42"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/sites?page=1&pageSize=20 - Duration: 72ms","service":"rms-api","timestamp":"2026-07-24 10:43:42"}
+{"level":"info","message":"Incoming Request: GET / - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:27:31"}
+{"level":"info","message":"Response Status: 200 for GET / - Duration: 105ms","service":"rms-api","timestamp":"2026-07-24 11:27:31"}
+{"level":"info","message":"Incoming Request: GET / - IP: ::ffff:192.168.1.6 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:27:31"}
+{"level":"info","message":"Response Status: 200 for GET / - Duration: 1ms","service":"rms-api","timestamp":"2026-07-24 11:27:31"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/search/barcode?barcode=x - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/search/barcode?barcode=x - Duration: 10ms","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/reports/activity-history - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/reports/activity-history - Duration: 3ms","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/refiles/assigned - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/refiles/assigned - Duration: 4ms","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/merges/assigned - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/merges/assigned - Duration: 4ms","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/segregations/assigned - IP: ::1 - UA: curl/8.7.1","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"warn","message":"Auth validation failed: Authorization header missing or formatted incorrectly","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/segregations/assigned - Duration: 2ms","service":"rms-api","timestamp":"2026-07-24 11:28:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:26"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 11:29:26"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/dashboard/stats - Duration: 120ms","service":"rms-api","timestamp":"2026-07-24 11:29:26"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/refresh - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:27"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/mobile/auth/refresh - Duration: 449ms","service":"rms-api","timestamp":"2026-07-24 11:29:27"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:27"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 30ms","service":"rms-api","timestamp":"2026-07-24 11:29:27"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:27"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 9ms","service":"rms-api","timestamp":"2026-07-24 11:29:27"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=BX227954 - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:36"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=BX227954 - Duration: 362ms","service":"rms-api","timestamp":"2026-07-24 11:29:37"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:37"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 25ms","service":"rms-api","timestamp":"2026-07-24 11:29:37"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:57"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=MAC5085191 - Duration: 121ms","service":"rms-api","timestamp":"2026-07-24 11:29:57"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:29:57"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 6ms","service":"rms-api","timestamp":"2026-07-24 11:29:57"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=MAC5085145 - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:30:09"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=MAC5085145 - Duration: 81ms","service":"rms-api","timestamp":"2026-07-24 11:30:09"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:30:09"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 6ms","service":"rms-api","timestamp":"2026-07-24 11:30:09"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/workflows/inventory-verify/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:30:35"}
+{"level":"info","message":"Response Status: 403 for GET /api/v1/mobile/workflows/inventory-verify/sessions - Duration: 33ms","service":"rms-api","timestamp":"2026-07-24 11:30:35"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/workflows/inventory-verify/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:30:40"}
+{"level":"info","message":"Response Status: 403 for GET /api/v1/mobile/workflows/inventory-verify/sessions - Duration: 8ms","service":"rms-api","timestamp":"2026-07-24 11:30:41"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:26"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 11:34:26"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 63ms","service":"rms-api","timestamp":"2026-07-24 11:34:26"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=7 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:26"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 11:34:26"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/dashboard/scan-activity?days=7 - Duration: 6ms","service":"rms-api","timestamp":"2026-07-24 11:34:26"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/refresh - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:27"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/admin/auth/refresh - Duration: 1203ms","service":"rms-api","timestamp":"2026-07-24 11:34:28"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard?days=7&limit=5 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:28"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/dashboard/scan-activity?days=7 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:28"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard/scan-activity?days=7 - Duration: 527ms","service":"rms-api","timestamp":"2026-07-24 11:34:28"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/dashboard?days=7&limit=5 - Duration: 601ms","service":"rms-api","timestamp":"2026-07-24 11:34:28"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/companies?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:36"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/companies?page=1&pageSize=20 - Duration: 32ms","service":"rms-api","timestamp":"2026-07-24 11:34:36"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/warehouses?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:39"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/sites?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:39"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/warehouses?page=1&pageSize=20 - Duration: 47ms","service":"rms-api","timestamp":"2026-07-24 11:34:39"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/sites?page=1&pageSize=100 - Duration: 46ms","service":"rms-api","timestamp":"2026-07-24 11:34:39"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/branches?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:34:40"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/branches?page=1&pageSize=20 - Duration: 37ms","service":"rms-api","timestamp":"2026-07-24 11:34:40"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/sites?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:00"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/branches?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:00"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/branches?page=1&pageSize=100 - Duration: 32ms","service":"rms-api","timestamp":"2026-07-24 11:35:00"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/sites?page=1&pageSize=20 - Duration: 36ms","service":"rms-api","timestamp":"2026-07-24 11:35:00"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/boxes?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/clients?page=1&pageSize=100 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/locations - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/clients?page=1&pageSize=100 - Duration: 131ms","service":"rms-api","timestamp":"2026-07-24 11:35:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/locations - Duration: 130ms","service":"rms-api","timestamp":"2026-07-24 11:35:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/boxes?page=1&pageSize=20 - Duration: 169ms","service":"rms-api","timestamp":"2026-07-24 11:35:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/users?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:28"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:35:28"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/users?page=1&pageSize=20 - Duration: 69ms","service":"rms-api","timestamp":"2026-07-24 11:35:29"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 77ms","service":"rms-api","timestamp":"2026-07-24 11:35:29"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:36:17"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles/permissions - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:36:17"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 42ms","service":"rms-api","timestamp":"2026-07-24 11:36:17"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles/permissions - Duration: 49ms","service":"rms-api","timestamp":"2026-07-24 11:36:17"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/devices?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:36:42"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/devices?page=1&pageSize=20 - Duration: 91ms","service":"rms-api","timestamp":"2026-07-24 11:36:42"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/reason-codes - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:37:22"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/reason-codes - Duration: 63ms","service":"rms-api","timestamp":"2026-07-24 11:37:22"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/workflows/fresh-box-move/sessions?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:38:22"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/workflows/fresh-box-move/sessions?page=1&pageSize=20 - Duration: 150ms","service":"rms-api","timestamp":"2026-07-24 11:38:23"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/reason-codes - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:38:43"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/reason-codes - Duration: 22ms","service":"rms-api","timestamp":"2026-07-24 11:38:43"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/devices?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:38:44"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/devices?page=1&pageSize=20 - Duration: 30ms","service":"rms-api","timestamp":"2026-07-24 11:38:44"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:38:46"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles/permissions - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:38:46"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles/permissions - Duration: 11ms","service":"rms-api","timestamp":"2026-07-24 11:38:46"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 29ms","service":"rms-api","timestamp":"2026-07-24 11:38:46"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/workflows/inventory-verify/sessions?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:38:51"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/workflows/inventory-verify/sessions?page=1&pageSize=20 - Duration: 58ms","service":"rms-api","timestamp":"2026-07-24 11:38:51"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/users?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:39:06"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:39:06"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 52ms","service":"rms-api","timestamp":"2026-07-24 11:39:06"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/users?page=1&pageSize=20 - Duration: 56ms","service":"rms-api","timestamp":"2026-07-24 11:39:06"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=BX227981 - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:41:55"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=BX227981 - Duration: 145ms","service":"rms-api","timestamp":"2026-07-24 11:41:55"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:41:55"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 11ms","service":"rms-api","timestamp":"2026-07-24 11:41:55"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/users?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:42:01"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:42:01"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/users?page=1&pageSize=20 - Duration: 62ms","service":"rms-api","timestamp":"2026-07-24 11:42:01"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 63ms","service":"rms-api","timestamp":"2026-07-24 11:42:01"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/scan/lookup?barcode=BX227954 - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:42:06"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/scan/lookup?barcode=BX227954 - Duration: 94ms","service":"rms-api","timestamp":"2026-07-24 11:42:06"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/scan - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:42:07"}
+{"level":"info","message":"Response Status: 201 for POST /api/v1/mobile/scan - Duration: 23ms","service":"rms-api","timestamp":"2026-07-24 11:42:07"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/workflows/inventory-verify/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:44:13"}
+{"level":"info","message":"Response Status: 403 for GET /api/v1/mobile/workflows/inventory-verify/sessions - Duration: 78ms","service":"rms-api","timestamp":"2026-07-24 11:44:13"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/users?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:44:36"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:44:36"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/users?page=1&pageSize=20 - Duration: 76ms","service":"rms-api","timestamp":"2026-07-24 11:44:36"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 69ms","service":"rms-api","timestamp":"2026-07-24 11:44:36"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/workflows/refile/scans?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:45:03"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/workflows/refile/scans?page=1&pageSize=20 - Duration: 158ms","service":"rms-api","timestamp":"2026-07-24 11:45:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:49:52"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 11:49:52"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/mobile/dashboard/stats - Duration: 36ms","service":"rms-api","timestamp":"2026-07-24 11:49:52"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/auth/refresh - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:49:52"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/mobile/auth/refresh - Duration: 80ms","service":"rms-api","timestamp":"2026-07-24 11:49:53"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:49:53"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 31ms","service":"rms-api","timestamp":"2026-07-24 11:49:53"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:49:53"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 8ms","service":"rms-api","timestamp":"2026-07-24 11:49:53"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/users?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/users?page=1&pageSize=20 - Duration: 3ms","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"warn","message":"Auth validation failed: Token has expired","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Response Status: 401 for GET /api/v1/admin/roles - Duration: 5ms","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Incoming Request: POST /api/v1/admin/auth/refresh - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Response Status: 200 for POST /api/v1/admin/auth/refresh - Duration: 45ms","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/users?page=1&pageSize=20 - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Incoming Request: GET /api/v1/admin/roles - IP: ::1 - UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/users?page=1&pageSize=20 - Duration: 28ms","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/admin/roles - Duration: 41ms","service":"rms-api","timestamp":"2026-07-24 11:50:07"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:33"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 131ms","service":"rms-api","timestamp":"2026-07-24 11:50:34"}
+{"level":"info","message":"Incoming Request: POST /api/v1/mobile/workflows/fresh-box-move/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:41"}
+{"level":"info","message":"Response Status: 400 for POST /api/v1/mobile/workflows/fresh-box-move/sessions - Duration: 35ms","service":"rms-api","timestamp":"2026-07-24 11:50:41"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/refiles/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:47"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/refiles/assigned - Duration: 8ms","service":"rms-api","timestamp":"2026-07-24 11:50:47"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/segregations/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:54"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/segregations/assigned - Duration: 10ms","service":"rms-api","timestamp":"2026-07-24 11:50:54"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/segregations/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:57"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/segregations/assigned - Duration: 17ms","service":"rms-api","timestamp":"2026-07-24 11:50:57"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/segregations/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:57"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/segregations/assigned - Duration: 5ms","service":"rms-api","timestamp":"2026-07-24 11:50:57"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/segregations/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:57"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/segregations/assigned - Duration: 23ms","service":"rms-api","timestamp":"2026-07-24 11:50:57"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/merges/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:50:59"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/merges/assigned - Duration: 6ms","service":"rms-api","timestamp":"2026-07-24 11:50:59"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/workflows/custody/transfers/assigned - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:51:02"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/workflows/custody/transfers/assigned - Duration: 59ms","service":"rms-api","timestamp":"2026-07-24 11:51:02"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/workflows/inventory-verify/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:51:04"}
+{"level":"info","message":"Response Status: 403 for GET /api/v1/mobile/workflows/inventory-verify/sessions - Duration: 6ms","service":"rms-api","timestamp":"2026-07-24 11:51:04"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/stats - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:51:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/stats - Duration: 31ms","service":"rms-api","timestamp":"2026-07-24 11:51:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/dashboard/tasks - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:51:08"}
+{"level":"info","message":"Response Status: 200 for GET /api/v1/mobile/dashboard/tasks - Duration: 5ms","service":"rms-api","timestamp":"2026-07-24 11:51:08"}
+{"level":"info","message":"Incoming Request: GET /api/v1/mobile/workflows/inventory-verify/sessions - IP: ::ffff:192.168.1.3 - UA: okhttp/4.12.0","service":"rms-api","timestamp":"2026-07-24 11:51:11"}
+{"level":"info","message":"Response Status: 403 for GET /api/v1/mobile/workflows/inventory-verify/sessions - Duration: 8ms","service":"rms-api","timestamp":"2026-07-24 11:51:11"}

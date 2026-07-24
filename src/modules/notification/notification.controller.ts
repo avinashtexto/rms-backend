@@ -34,4 +34,15 @@ export class NotificationController {
       next(error);
     }
   }
+
+  static async deleteNotification(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const notificationId = req.params.notificationId as string;
+      const result = await NotificationService.deleteNotification(userId, notificationId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
