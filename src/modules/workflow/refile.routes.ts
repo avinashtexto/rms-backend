@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(requireAuth as any);
 
-router.post('/scans', requirePermission('scan:workflow') as any, RefileController.submitScan as any);
-router.get('/scans', requirePermission('scan:workflow') as any, RefileController.listRefileScans as any);
+router.post('/scans', requirePermission('workflow:execute') as any, RefileController.submitScan as any);
+router.get('/scans', requirePermission('workflow:execute') as any, RefileController.listRefileScans as any);
 
 export default router;
