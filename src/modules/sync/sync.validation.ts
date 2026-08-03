@@ -16,3 +16,15 @@ export const syncBatchSchema = z.object({
 export const resolveConflictSchema = z.object({
   resolution: z.enum(['CLIENT_WIN', 'SERVER_WIN'])
 });
+
+export const syncOperationsSchema = z.object({
+  operations: z
+    .array(
+      z.object({
+        type: z.enum(['INTAKE', 'FRESH_BOX', 'INVENTORY', 'REFILE', 'SEGREGATION', 'LOOKUP']),
+        payload: z.record(z.string(), z.unknown())
+      })
+    )
+    .min(1)
+    .max(50)
+});

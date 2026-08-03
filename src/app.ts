@@ -3,6 +3,15 @@ import express from 'express';
 import cors from 'cors';
 import adminRoutes from './routes/admin.routes';
 import mobileRoutes from './routes/mobile.routes';
+import syncRoutes from './modules/sync/sync.routes';
+import recordsRoutes from './modules/records/records.routes';
+import usersRoutes from './modules/users/users.routes';
+import accessDevicesRoutes from './modules/users/devices.routes';
+import metaRoutes from './modules/users/meta.routes';
+import auditRoutes from './modules/audit/audit.routes';
+import operationsRoutes from './modules/operations/operations.routes';
+import reportsRoutes from './modules/reports/reports.routes';
+import importsRoutes from './modules/imports/imports.routes';
 import { errorHandler } from './middleware/error.middleware';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocument from './config/swagger.json';
@@ -51,6 +60,15 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Base routes
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/mobile', mobileRoutes);
+app.use('/api/v1/sync', syncRoutes);
+app.use('/api/v1/records', recordsRoutes);
+app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/devices', accessDevicesRoutes);
+app.use('/api/v1/meta', metaRoutes);
+app.use('/api/v1/audit', auditRoutes);
+app.use('/api/v1/operations', operationsRoutes);
+app.use('/api/v1/reports', reportsRoutes);
+app.use('/api/v1/imports', importsRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

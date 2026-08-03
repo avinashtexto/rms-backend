@@ -135,6 +135,21 @@ enum NotificationType {
   GPS_DISABLED
 }
 
+enum OperationType {
+  INTAKE
+  FRESH_BOX
+  INVENTORY
+  REFILE
+  SEGREGATION
+  LOOKUP
+}
+
+enum WarningCode {
+  BOX_OVER_CAPACITY
+  DUPLICATE_SCAN
+  CAPACITY_EXCEEDED
+}
+
 // ============================================================
 // TENANCY & ORG MASTER DATA
 // ============================================================
@@ -227,6 +242,7 @@ model Warehouse {
   site          Site?       @relation(fields: [siteId], references: [id])
   rooms         Room[]
   gpsTracks     GpsTrack[]
+  userAssignments UserWarehouseAssignment[]
   transfersFrom Transfer[] @relation("TransferFromWarehouse")
   transfersTo   Transfer[] @relation("TransferToWarehouse")
 
@@ -240,6 +256,7 @@ model Room {
   warehouseId String
   name        String
   code        String
+  barcode     String?  @unique
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -249,6 +266,7 @@ model Room {
   racks     Rack[]
 
   @@unique([warehouseId, code])
+  @@index([barcode])
   @@map("rooms")
 }
 
@@ -257,6 +275,7 @@ model Rack {
   roomId    String
   name      String
   code      String
+  barcode   String?  @unique
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -265,6 +284,7 @@ model Rack {
   shelves Shelf[]
 
   @@unique([roomId, code])
+  @@index([barcode])
   @@map("racks")
 }
 
@@ -303,6 +323,7 @@ model Location {
   freshBoxMoves    FreshBoxMoveScan[]
   refileEvents     RefileEvent[]
   locationOverride LocationOverride[]
+  auditLogs        AuditLog[]
 
   @@unique([shelfId, name])
   @@index([barcode])
@@ -406,6 +427,7 @@ model User {
 
   devices                Device[]
   refreshTokens          RefreshToken[]
+  warehouseAssignments   UserWarehouseAssignment[]
   auditLogs              AuditLog[]
   gpsTracks              GpsTrack[]
   notifications          Notification[]
@@ -448,6 +470,9 @@ model Device {
   assignedUserId String?
   serialNumber   String       @unique
   model          String
+  label          String?
+  appVersion     String?
+  isActive       Boolean      @default(true)
   status         DeviceStatus @default(PENDING)
   lastSeenAt     DateTime?
   createdAt      DateTime     @default(now())
@@ -461,6 +486,18 @@ model Device {
 
   @@index([companyId])
   @@map("devices")
+}
+
+model UserWarehouseAssignment {
+  userId      String
+  warehouseId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@id([userId, warehouseId])
+  @@map("user_warehouse_assignments")
 }
 
 model ReasonCode {
@@ -491,6 +528,7 @@ model Box {
   status       BoxStatus @default(ACTIVE)
   description  String?
   capacity     Int?      @default(25) // max files this box can hold; null = no limit
+  fileCapacity Int       @default(0)
 
   currentLocationId String? @unique
   mergedIntoBoxId   String?
@@ -513,6 +551,7 @@ model Box {
   segregationOldBox             SegregationSession[]           @relation("SegregationOldBox")
   segregationNewBox             SegregationSession[]           @relation("SegregationNewBox")
   transfers                     Transfer[]
+  auditLogs                     AuditLog[]
 
   @@index([companyId, clientId])
   @@index([barcode])
@@ -534,6 +573,7 @@ model FileRecord {
   inventoryVerificationScans InventoryVerificationScan[]
   refileEvents               RefileEvent[]
   segregationMovedFiles      SegregationFileMove[]
+  auditLogs                  AuditLog[]
 
   @@index([companyId, boxId])
   @@index([barcode])
@@ -801,6 +841,9 @@ model AuditLog {
   company Company @relation(fields: [companyId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
   device  Device? @relation(fields: [deviceId], references: [id])
+  box        Box?        @relation(fields: [boxId], references: [id])
+  fileRecord FileRecord? @relation(fields: [fileRecordId], references: [id])
+  location   Location?   @relation(fields: [locationId], references: [id])
 
   @@index([companyId, createdAt])
   @@index([boxId])

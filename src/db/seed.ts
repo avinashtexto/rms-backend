@@ -508,6 +508,34 @@ async function main() {
   });
   console.log('Created FileRecord:', file3.barcode);
 
+  await prisma.room.update({
+    where: {
+      warehouseId_code: {
+        warehouseId: warehouse.id,
+        code: 'RM-101',
+      },
+    },
+    data: { barcode: 'ROOM-A-001' },
+  });
+  console.log('Updated Room barcode: ROOM-A-001');
+
+  await prisma.rack.update({
+    where: {
+      roomId_code: {
+        roomId: room.id,
+        code: 'RK-A',
+      },
+    },
+    data: { barcode: 'RACK-A-001' },
+  });
+  console.log('Updated Rack barcode: RACK-A-001');
+
+  await prisma.box.update({
+    where: { barcode: 'BOX-000001' },
+    data: { fileCapacity: 10 },
+  });
+  console.log('Updated Box fileCapacity: BOX-000001 → 10');
+
   console.log('Seeding completed successfully.');
 }
 

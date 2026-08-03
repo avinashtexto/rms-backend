@@ -1,9 +1,25 @@
 import { Response, NextFunction } from 'express';
 import { SyncService } from './sync.service';
-import { syncBatchSchema, resolveConflictSchema } from './sync.validation';
+import { syncBatchSchema, resolveConflictSchema, syncOperationsSchema } from './sync.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class SyncController {
+  static async syncOperations(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = syncOperationsSchema.parse(req.body);
+      const results = await SyncService.processOperations(
+        {
+          id: req.user!.id,
+          companyId: req.user!.companyId
+        },
+        data.operations
+      );
+      res.status(200).json({ success: true, data: { results } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async syncBatch(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;

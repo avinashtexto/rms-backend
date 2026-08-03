@@ -8,6 +8,10 @@ export class AuditController {
     try {
       const companyId = req.user!.companyId;
       const query = listAuditLogsQuerySchema.parse(req.query);
+      const limit = query.limit ?? query.pageSize ?? 20;
+      const from = query.from ? new Date(query.from) : query.start ? new Date(query.start) : undefined;
+      const to = query.to ? new Date(query.to) : query.end ? new Date(query.end) : undefined;
+
       const result = await AuditService.listAuditLogs(
         companyId,
         {
@@ -16,15 +20,17 @@ export class AuditController {
           boxId: query.boxId,
           fileRecordId: query.fileRecordId,
           action: query.action,
-          start: query.start,
-          end: query.end
+          entityType: query.entityType,
+          entityId: query.entityId,
+          from,
+          to
         },
         query.page,
-        query.pageSize
+        limit
       );
       res.status(200).json({
         success: true,
-        data: result.logs,
+        data: result.data,
         meta: result.meta
       });
     } catch (error) {
@@ -35,7 +41,7 @@ export class AuditController {
   static async getAuditLogById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
-      const auditLogId = req.params.auditLogId as string;
+      const auditLogId = (req.params.id ?? req.params.auditLogId) as string;
       const log = await AuditService.getAuditLogById(companyId, auditLogId);
       res.status(200).json({ success: true, data: log });
     } catch (error) {

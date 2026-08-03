@@ -85,15 +85,29 @@ export class AuthService {
         where: { serialNumber: device.serialNumber },
         update: {
           model: device.model,
-          lastSeenAt: new Date()
+          appVersion: device.appVersion,
+          lastSeenAt: new Date(),
+          assignedUserId: user.id
         },
         create: {
           serialNumber: device.serialNumber,
           model: device.model,
+          appVersion: device.appVersion,
           companyId: user.companyId,
-          lastSeenAt: new Date()
+          status: 'APPROVED',
+          isActive: true,
+          lastSeenAt: new Date(),
+          assignedUserId: user.id
         }
       });
+
+      if (!deviceRecord.isActive || deviceRecord.status === 'BLOCKED') {
+        const error: AppError = new Error('This device has been deactivated and cannot log in');
+        error.statusCode = 403;
+        error.code = ErrorCode.DEVICE_BLOCKED;
+        throw error;
+      }
+
       deviceId = deviceRecord.id;
     }
 
