@@ -12,6 +12,9 @@ jest.mock('../../lib/prisma', () => ({
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn()
+    },
+    site: {
+      count: jest.fn()
     }
   }
 }));
@@ -95,7 +98,7 @@ describe('BranchRepository', () => {
       const result = await BranchRepository.findByCompanyAndId(mockCompanyId, mockBranchId);
 
       expect(prisma.branch.findFirst).toHaveBeenCalledWith({
-        where: { id: mockBranchId, companyId: mockCompanyId }
+        where: { id: mockBranchId, companyId: mockCompanyId, deletedAt: null }
       });
       expect(result).toEqual(mockBranch);
     });

@@ -5,5 +5,13 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.spec.ts', '**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
-  clearMocks: true
+  clearMocks: true,
+  transform: {
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.test.json'
+      }
+    ]
+  }
 };
