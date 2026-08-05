@@ -8,6 +8,8 @@ export const submitScanSchema = z.object({
   locationBarcode: z.string().min(1),
   boxBarcode: z.string().min(1),
   clientOpId: z.string().uuid(),
+  roomBarcode: z.string().min(1).optional().nullable(),
+  rackBarcode: z.string().min(1).optional().nullable(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   scannedAt: z.string().datetime().optional()
@@ -26,5 +28,7 @@ export const freshBoxMoveSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   locationBarcode: z.string().min(1),
+  roomBarcode: z.string().min(1).optional().nullable(),
+  rackBarcode: z.string().min(1).optional().nullable(),
   boxBarcodes: z.array(z.string().min(1))
 });

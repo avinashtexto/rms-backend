@@ -12,6 +12,7 @@ import auditRoutes from './modules/audit/audit.routes';
 import operationsRoutes from './modules/operations/operations.routes';
 import reportsRoutes from './modules/reports/reports.routes';
 import importsRoutes from './modules/imports/imports.routes';
+import settingsRootRoutes from './modules/setting/settings-root.routes';
 import { errorHandler } from './middleware/error.middleware';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocument from './config/swagger.json';
@@ -31,7 +32,7 @@ app.use(cors({
     'http://127.0.0.1:3002'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
@@ -69,6 +70,7 @@ app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/operations', operationsRoutes);
 app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/imports', importsRoutes);
+app.use('/api/v1/settings', settingsRootRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

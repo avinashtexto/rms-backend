@@ -40,7 +40,7 @@ export class SettingController {
     try {
       const companyId = req.user!.companyId;
       const data = updateCompanySchema.parse(req.body);
-      const settings = await SettingService.updateCompanySettings(companyId, data.name);
+      const settings = await SettingService.updateCompanySettings(companyId, data);
       res.status(200).json({ success: true, data: settings });
     } catch (error) {
       next(error);

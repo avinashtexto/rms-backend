@@ -147,6 +147,8 @@ export class SyncService {
       latitude: typeof payload.latitude === 'number' ? payload.latitude : undefined,
       longitude: typeof payload.longitude === 'number' ? payload.longitude : undefined,
       locationBarcode: asString(payload.locationBarcode, 'locationBarcode'),
+      roomBarcode: typeof payload.roomBarcode === 'string' ? payload.roomBarcode : null,
+      rackBarcode: typeof payload.rackBarcode === 'string' ? payload.rackBarcode : null,
       boxBarcodes: asStringArray(payload.boxBarcodes, 'boxBarcodes')
     });
 

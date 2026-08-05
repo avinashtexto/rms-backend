@@ -3,7 +3,90 @@ import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 import { WorkflowAction } from '@prisma/client';
 
+type HierarchyContext = {
+  roomBarcode?: string | null;
+  rackBarcode?: string | null;
+};
+
 export class FreshBoxMoveService {
+  private static async validateHierarchyChain(
+    companyId: string,
+    location: {
+      shelf: {
+        rack: {
+          id: string;
+          barcode: string | null;
+          room: {
+            id: string;
+            barcode: string | null;
+          };
+        };
+      };
+    },
+    context: HierarchyContext
+  ) {
+    const locationRack = location.shelf.rack;
+    const locationRoom = locationRack.room;
+
+    if (context.roomBarcode) {
+      const scannedRoom = await prisma.room.findFirst({
+        where: {
+          barcode: context.roomBarcode,
+          warehouse: { companyId, isActive: true }
+        }
+      });
+
+      if (!scannedRoom) {
+        const error: AppError = new Error(`Room with barcode '${context.roomBarcode}' not found`);
+        error.statusCode = 404;
+        error.code = ErrorCode.ROOM_NOT_FOUND;
+        throw error;
+      }
+
+      if (scannedRoom.id !== locationRoom.id) {
+        const error: AppError = new Error(
+          `Location does not belong to room '${context.roomBarcode}'`
+        );
+        error.statusCode = 409;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
+    }
+
+    if (context.rackBarcode) {
+      const scannedRack = await prisma.rack.findFirst({
+        where: {
+          barcode: context.rackBarcode,
+          room: { warehouse: { companyId, isActive: true } }
+        }
+      });
+
+      if (!scannedRack) {
+        const error: AppError = new Error(`Rack with barcode '${context.rackBarcode}' not found`);
+        error.statusCode = 404;
+        error.code = ErrorCode.RACK_NOT_FOUND;
+        throw error;
+      }
+
+      if (context.roomBarcode && scannedRack.roomId !== locationRoom.id) {
+        const error: AppError = new Error(
+          `Rack '${context.rackBarcode}' does not belong to room '${context.roomBarcode}'`
+        );
+        error.statusCode = 409;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
+
+      if (scannedRack.id !== locationRack.id) {
+        const error: AppError = new Error(
+          `Location does not belong to rack '${context.rackBarcode}'`
+        );
+        error.statusCode = 409;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
+    }
+  }
   static async startSession(operatorId: string, deviceId?: string | null) {
     return prisma.freshBoxMoveSession.create({
       data: {
@@ -21,6 +104,8 @@ export class FreshBoxMoveService {
       locationBarcode: string;
       boxBarcode: string;
       clientEventId: string;
+      roomBarcode?: string | null;
+      rackBarcode?: string | null;
       gpsLat?: number | null;
       gpsLng?: number | null;
       scannedAt: Date;
@@ -88,6 +173,11 @@ export class FreshBoxMoveService {
       error.code = ErrorCode.FORBIDDEN;
       throw error;
     }
+
+    await FreshBoxMoveService.validateHierarchyChain(companyId, location, {
+      roomBarcode: data.roomBarcode,
+      rackBarcode: data.rackBarcode
+    });
 
     // 4. Resolve Box and verify tenant ownership
     const box = await prisma.box.findUnique({
@@ -297,6 +387,8 @@ export class FreshBoxMoveService {
       latitude?: number;
       longitude?: number;
       locationBarcode: string;
+      roomBarcode?: string | null;
+      rackBarcode?: string | null;
       boxBarcodes: string[];
     }
   ) {
@@ -342,6 +434,17 @@ export class FreshBoxMoveService {
             }
           }
         }
+      },
+      include: {
+        shelf: {
+          include: {
+            rack: {
+              include: {
+                room: true
+              }
+            }
+          }
+        }
       }
     });
 
@@ -351,6 +454,11 @@ export class FreshBoxMoveService {
       error.code = ErrorCode.NOT_FOUND;
       throw error;
     }
+
+    await FreshBoxMoveService.validateHierarchyChain(companyId, location, {
+      roomBarcode: data.roomBarcode,
+      rackBarcode: data.rackBarcode
+    });
 
     // Capacity enforcement — a Location holds exactly one active Box. Reject
     // outright (don't just warn-and-proceed) if this batch would place more

@@ -58,7 +58,8 @@ export const updateAssignmentsSchema = z.object({
 export const updateMeSchema = z.object({
   fullName: z.string().min(1).optional(),
   email: z.string().trim().toLowerCase().email().optional(),
-  phone: z.string().optional().nullable()
+  phone: z.string().optional().nullable(),
+  newPassword: z.string().min(8).optional()
 });
 
 export const listDevicesQuerySchema = z.object({

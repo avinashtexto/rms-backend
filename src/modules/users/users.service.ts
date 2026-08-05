@@ -423,7 +423,7 @@ export class UsersService {
 
   static async updateMe(
     userId: string,
-    data: { fullName?: string; email?: string; phone?: string | null }
+    data: { fullName?: string; email?: string; phone?: string | null; newPassword?: string }
   ) {
     const existing = await prisma.user.findUnique({ where: { id: userId } });
     if (!existing) {
@@ -443,12 +443,16 @@ export class UsersService {
       }
     }
 
+    const passwordHash =
+      data.newPassword !== undefined ? await bcrypt.hash(data.newPassword, 10) : undefined;
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         ...(data.fullName !== undefined && { fullName: data.fullName }),
         ...(data.email !== undefined && { email: data.email }),
-        ...(data.phone !== undefined && { phone: data.phone })
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(passwordHash !== undefined && { passwordHash })
       },
       select: userPublicSelect
     });

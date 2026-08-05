@@ -25,6 +25,8 @@ export class FreshBoxMoveController {
         locationBarcode: data.locationBarcode,
         boxBarcode: data.boxBarcode,
         clientEventId: data.clientOpId, // Map clientOpId to clientEventId for service
+        roomBarcode: data.roomBarcode,
+        rackBarcode: data.rackBarcode,
         gpsLat: data.latitude,
         gpsLng: data.longitude,
         scannedAt: data.scannedAt ? new Date(data.scannedAt) : new Date()

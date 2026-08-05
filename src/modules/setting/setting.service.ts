@@ -41,6 +41,21 @@ export class SettingService {
     });
   }
 
+  private static parsePreferences(raw: unknown) {
+    const source =
+      raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : {};
+    const capacity = source.defaultLocationCapacity;
+    const timezone = source.timezone;
+
+    return {
+      defaultLocationCapacity:
+        typeof capacity === 'number' && capacity >= 1 && capacity <= 99 ? capacity : 1,
+      timezone: typeof timezone === 'string' && timezone.length > 0 ? timezone : 'UTC'
+    };
+  }
+
   static async getCompanySettings(companyId: string) {
     const company = await prisma.company.findUnique({
       where: { id: companyId }
@@ -53,10 +68,28 @@ export class SettingService {
       throw error;
     }
 
-    return company;
+    const preferences = SettingService.parsePreferences(company.preferences);
+
+    return {
+      id: company.id,
+      name: company.name,
+      code: company.code,
+      isActive: company.isActive,
+      defaultLocationCapacity: preferences.defaultLocationCapacity,
+      timezone: preferences.timezone,
+      createdAt: company.createdAt,
+      updatedAt: company.updatedAt
+    };
   }
 
-  static async updateCompanySettings(companyId: string, name?: string) {
+  static async updateCompanySettings(
+    companyId: string,
+    data: {
+      name?: string;
+      defaultLocationCapacity?: number;
+      timezone?: string;
+    }
+  ) {
     const company = await prisma.company.findUnique({
       where: { id: companyId }
     });
@@ -68,11 +101,32 @@ export class SettingService {
       throw error;
     }
 
-    return prisma.company.update({
+    const currentPreferences = SettingService.parsePreferences(company.preferences);
+    const nextPreferences = {
+      defaultLocationCapacity:
+        data.defaultLocationCapacity ?? currentPreferences.defaultLocationCapacity,
+      timezone: data.timezone ?? currentPreferences.timezone
+    };
+
+    const updated = await prisma.company.update({
       where: { id: companyId },
       data: {
-        name: name !== undefined ? name : company.name
+        name: data.name !== undefined ? data.name : company.name,
+        preferences: nextPreferences
       }
     });
+
+    const preferences = SettingService.parsePreferences(updated.preferences);
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      code: updated.code,
+      isActive: updated.isActive,
+      defaultLocationCapacity: preferences.defaultLocationCapacity,
+      timezone: preferences.timezone,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt
+    };
   }
 }

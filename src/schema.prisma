@@ -155,12 +155,13 @@ enum WarningCode {
 // ============================================================
 
 model Company {
-  id        String   @id @default(uuid())
-  name      String
-  code      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  preferences Json     @default("{}")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   branches      Branch[]
   clients       Client[]
