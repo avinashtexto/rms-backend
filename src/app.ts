@@ -13,6 +13,7 @@ import operationsRoutes from './modules/operations/operations.routes';
 import reportsRoutes from './modules/reports/reports.routes';
 import importsRoutes from './modules/imports/imports.routes';
 import settingsRootRoutes from './modules/setting/settings-root.routes';
+import barcodeMasterRoutes from './modules/barcode-master/barcode-master.routes';
 import { errorHandler } from './middleware/error.middleware';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocument from './config/swagger.json';
@@ -76,6 +77,7 @@ app.use('/api/v1/operations', operationsRoutes);
 app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/imports', importsRoutes);
 app.use('/api/v1/settings', settingsRootRoutes);
+app.use('/api/v1/barcode', barcodeMasterRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

@@ -27,11 +27,13 @@ import freshBoxMoveRoutes from '../modules/workflow/fresh-box-move.routes';
 import inventoryVerifyRoutes from '../modules/workflow/inventory-verify.routes';
 import refileRoutes from '../modules/workflow/refile.routes';
 import custodyMoveRoutes from '../modules/workflow/custody-move.routes';
+import barcodeMasterRoutes from '../modules/barcode-master/barcode-master.routes';
 
 const adminRouter = Router();
 
 // Mount individual domain route groups
 adminRouter.use('/auth', authRoutes);
+adminRouter.use('/barcode', barcodeMasterRoutes);
 adminRouter.use('/companies', companyRoutes);
 adminRouter.use('/warehouses', warehouseRoutes);
 adminRouter.use('/users', userRoutes);

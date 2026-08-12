@@ -1,0 +1,699 @@
+import { prisma } from '../../lib/prisma';
+import { BarcodeType, BarcodeStatus } from '@prisma/client';
+import { AppError } from '../../middleware/error.middleware';
+import { ErrorCode } from '../../lib/error-codes';
+
+export interface ListBarcodesQuery {
+  companyId?: string;
+  siteId?: string;
+  branchId?: string;
+  warehouseId?: string;
+  type?: BarcodeType;
+  status?: BarcodeStatus;
+  isAssigned?: boolean;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface BulkGenerateParams {
+  companyId: string;
+  siteId?: string;
+  branchId?: string;
+  warehouseId?: string;
+  type: BarcodeType;
+  prefix: string;
+  startingNumber: number;
+  quantity: number;
+  remarks?: string;
+}
+
+export interface ImportBarcodeRow {
+  barcode: string;
+  type: BarcodeType;
+  status?: BarcodeStatus;
+  siteCode?: string;
+  branchCode?: string;
+  warehouseCode?: string;
+  remarks?: string;
+}
+
+export class BarcodeMasterService {
+  /**
+   * Dashboard Summary Statistics
+   */
+  static async getDashboardStats(companyId: string) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [
+      total,
+      boxCount,
+      fileCount,
+      locationCount,
+      assignedCount,
+      unassignedCount,
+      inactiveCount,
+      todayGenerated
+    ] = await Promise.all([
+      prisma.barcodeMaster.count({ where: { companyId } }),
+      prisma.barcodeMaster.count({ where: { companyId, type: BarcodeType.BOX } }),
+      prisma.barcodeMaster.count({ where: { companyId, type: BarcodeType.FILE_RECORD } }),
+      prisma.barcodeMaster.count({ where: { companyId, type: BarcodeType.LOCATION } }),
+      prisma.barcodeMaster.count({ where: { companyId, isAssigned: true } }),
+      prisma.barcodeMaster.count({ where: { companyId, status: BarcodeStatus.UNASSIGNED } }),
+      prisma.barcodeMaster.count({ where: { companyId, status: BarcodeStatus.INACTIVE } }),
+      prisma.barcodeMaster.count({ where: { companyId, createdAt: { gte: todayStart } } })
+    ]);
+
+    return {
+      total,
+      boxCount,
+      fileCount,
+      locationCount,
+      assignedCount,
+      unassignedCount,
+      inactiveCount,
+      todayGenerated
+    };
+  }
+
+  /**
+   * Create single barcode
+   */
+  static async create(data: {
+    companyId: string;
+    siteId?: string;
+    branchId?: string;
+    warehouseId?: string;
+    barcode: string;
+    type: BarcodeType;
+    status?: BarcodeStatus;
+    remarks?: string;
+  }, userId: string) {
+    const cleanBarcode = data.barcode.trim().toUpperCase();
+
+    // Check duplicate
+    const existing = await prisma.barcodeMaster.findUnique({
+      where: { barcode: cleanBarcode }
+    });
+
+    if (existing) {
+      const err: AppError = new Error('Barcode already exists.');
+      err.statusCode = 400;
+      err.code = ErrorCode.DUPLICATE_CODE;
+      throw err;
+    }
+
+    // Check if object already exists in database
+    let isAssigned = false;
+    let assignedToType: string | undefined;
+    let assignedToId: string | undefined;
+
+    if (data.type === BarcodeType.BOX) {
+      const box = await prisma.box.findUnique({ where: { barcode: cleanBarcode } });
+      if (box) {
+        isAssigned = true;
+        assignedToType = 'BOX';
+        assignedToId = box.id;
+      }
+    } else if (data.type === BarcodeType.FILE_RECORD) {
+      const file = await prisma.fileRecord.findUnique({ where: { barcode: cleanBarcode } });
+      if (file) {
+        isAssigned = true;
+        assignedToType = 'FILE_RECORD';
+        assignedToId = file.id;
+      }
+    } else if (data.type === BarcodeType.LOCATION) {
+      const loc = await prisma.location.findUnique({ where: { barcode: cleanBarcode } });
+      if (loc) {
+        isAssigned = true;
+        assignedToType = 'LOCATION';
+        assignedToId = loc.id;
+      }
+    }
+
+    const initialStatus = isAssigned ? BarcodeStatus.ASSIGNED : (data.status || BarcodeStatus.UNASSIGNED);
+
+    const barcodeObj = await prisma.barcodeMaster.create({
+      data: {
+        companyId: data.companyId,
+        siteId: data.siteId,
+        branchId: data.branchId,
+        warehouseId: data.warehouseId,
+        barcode: cleanBarcode,
+        type: data.type,
+        status: initialStatus,
+        isAssigned,
+        assignedToType,
+        assignedToId,
+        assignedAt: isAssigned ? new Date() : undefined,
+        createdById: userId,
+        remarks: data.remarks
+      },
+      include: {
+        site: { select: { id: true, name: true, code: true } },
+        branch: { select: { id: true, name: true, code: true } },
+        warehouse: { select: { id: true, name: true, code: true } },
+        createdBy: { select: { id: true, fullName: true, email: true } }
+      }
+    });
+
+    // Record history log
+    await prisma.barcodeHistory.create({
+      data: {
+        barcodeMasterId: barcodeObj.id,
+        barcode: cleanBarcode,
+        action: 'CREATED',
+        newStatus: initialStatus,
+        userId,
+        remarks: data.remarks || 'Barcode created'
+      }
+    });
+
+    return barcodeObj;
+  }
+
+  /**
+   * List Barcodes with Pagination & Filters
+   */
+  static async list(query: ListBarcodesQuery) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (query.companyId) where.companyId = query.companyId;
+    if (query.siteId) where.siteId = query.siteId;
+    if (query.branchId) where.branchId = query.branchId;
+    if (query.warehouseId) where.warehouseId = query.warehouseId;
+    if (query.type) where.type = query.type;
+    if (query.status) where.status = query.status;
+    if (query.isAssigned !== undefined) where.isAssigned = String(query.isAssigned) === 'true';
+
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) where.createdAt.gte = new Date(query.startDate);
+      if (query.endDate) where.createdAt.lte = new Date(query.endDate);
+    }
+
+    if (query.search) {
+      where.OR = [
+        { barcode: { contains: query.search.trim(), mode: 'insensitive' } },
+        { remarks: { contains: query.search.trim(), mode: 'insensitive' } }
+      ];
+    }
+
+    const [total, data] = await Promise.all([
+      prisma.barcodeMaster.count({ where }),
+      prisma.barcodeMaster.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          company: { select: { id: true, name: true, code: true } },
+          site: { select: { id: true, name: true, code: true } },
+          branch: { select: { id: true, name: true, code: true } },
+          warehouse: { select: { id: true, name: true, code: true } },
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        }
+      })
+    ]);
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  /**
+   * Get single barcode details & history timeline
+   */
+  static async getById(id: string) {
+    const barcodeObj = await prisma.barcodeMaster.findUnique({
+      where: { id },
+      include: {
+        company: { select: { id: true, name: true, code: true } },
+        site: { select: { id: true, name: true, code: true } },
+        branch: { select: { id: true, name: true, code: true } },
+        warehouse: { select: { id: true, name: true, code: true } },
+        createdBy: { select: { id: true, fullName: true, email: true } },
+        history: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: { select: { id: true, fullName: true, email: true } }
+          }
+        }
+      }
+    });
+
+    if (!barcodeObj) {
+      const err: AppError = new Error('Barcode not found');
+      err.statusCode = 404;
+      err.code = ErrorCode.NOT_FOUND;
+      throw err;
+    }
+
+    return barcodeObj;
+  }
+
+  /**
+   * Update barcode
+   */
+  static async update(id: string, data: {
+    status?: BarcodeStatus;
+    siteId?: string;
+    branchId?: string;
+    warehouseId?: string;
+    remarks?: string;
+  }, userId: string) {
+    const existing = await prisma.barcodeMaster.findUnique({ where: { id } });
+
+    if (!existing) {
+      const err: AppError = new Error('Barcode not found');
+      err.statusCode = 404;
+      err.code = ErrorCode.NOT_FOUND;
+      throw err;
+    }
+
+    const updated = await prisma.barcodeMaster.update({
+      where: { id },
+      data: {
+        status: data.status || existing.status,
+        siteId: data.siteId !== undefined ? data.siteId : existing.siteId,
+        branchId: data.branchId !== undefined ? data.branchId : existing.branchId,
+        warehouseId: data.warehouseId !== undefined ? data.warehouseId : existing.warehouseId,
+        remarks: data.remarks !== undefined ? data.remarks : existing.remarks
+      },
+      include: {
+        site: { select: { id: true, name: true, code: true } },
+        branch: { select: { id: true, name: true, code: true } },
+        warehouse: { select: { id: true, name: true, code: true } }
+      }
+    });
+
+    // Record history
+    await prisma.barcodeHistory.create({
+      data: {
+        barcodeMasterId: existing.id,
+        barcode: existing.barcode,
+        action: 'UPDATED',
+        previousStatus: existing.status,
+        newStatus: data.status || existing.status,
+        userId,
+        remarks: data.remarks || 'Barcode updated'
+      }
+    });
+
+    return updated;
+  }
+
+  /**
+   * Delete barcode
+   */
+  static async delete(id: string, userId: string) {
+    const existing = await prisma.barcodeMaster.findUnique({ where: { id } });
+
+    if (!existing) {
+      const err: AppError = new Error('Barcode not found');
+      err.statusCode = 404;
+      err.code = ErrorCode.NOT_FOUND;
+      throw err;
+    }
+
+    if (existing.isAssigned) {
+      const err: AppError = new Error('Cannot delete an assigned barcode.');
+      err.statusCode = 400;
+      err.code = ErrorCode.BAD_REQUEST;
+      throw err;
+    }
+
+    await prisma.barcodeMaster.delete({ where: { id } });
+    return { success: true, message: 'Barcode deleted successfully.' };
+  }
+
+  /**
+   * Bulk Auto-Generation of Barcodes
+   */
+  static async bulkGenerate(params: BulkGenerateParams, userId: string) {
+    const { companyId, siteId, branchId, warehouseId, type, prefix, startingNumber, quantity, remarks } = params;
+
+    if (quantity < 1 || quantity > 10000) {
+      const err: AppError = new Error('Quantity must be between 1 and 10,000');
+      err.statusCode = 400;
+      err.code = ErrorCode.VALIDATION_ERROR;
+      throw err;
+    }
+
+    const createdBarcodes: string[] = [];
+    const skippedBarcodes: string[] = [];
+
+    // Calculate number padding (e.g. starting number 1 with quantity 100 -> 6 digits padding)
+    const padLength = Math.max(6, String(startingNumber + quantity).length);
+
+    const barcodeItemsToCreate: any[] = [];
+
+    for (let i = 0; i < quantity; i++) {
+      const numStr = String(startingNumber + i).padStart(padLength, '0');
+      const barcodeStr = `${prefix.trim().toUpperCase()}${numStr}`;
+
+      barcodeItemsToCreate.push({
+        companyId,
+        siteId,
+        branchId,
+        warehouseId,
+        barcode: barcodeStr,
+        type,
+        status: BarcodeStatus.UNASSIGNED,
+        isAssigned: false,
+        createdById: userId,
+        remarks: remarks || `Auto-generated sequence`
+      });
+    }
+
+    // Filter out duplicates in single query
+    const generatedStrings = barcodeItemsToCreate.map(b => b.barcode);
+    const existingInDb = await prisma.barcodeMaster.findMany({
+      where: { barcode: { in: generatedStrings } },
+      select: { barcode: true }
+    });
+    const existingSet = new Set(existingInDb.map(e => e.barcode));
+
+    const finalToCreate = barcodeItemsToCreate.filter(b => {
+      if (existingSet.has(b.barcode)) {
+        skippedBarcodes.push(b.barcode);
+        return false;
+      }
+      createdBarcodes.push(b.barcode);
+      return true;
+    });
+
+    if (finalToCreate.length > 0) {
+      await prisma.barcodeMaster.createMany({
+        data: finalToCreate,
+        skipDuplicates: true
+      });
+
+      // Fetch created items to generate history records
+      const createdItems = await prisma.barcodeMaster.findMany({
+        where: { barcode: { in: createdBarcodes } },
+        select: { id: true, barcode: true }
+      });
+
+      const historyData = createdItems.map(item => ({
+        barcodeMasterId: item.id,
+        barcode: item.barcode,
+        action: 'GENERATED',
+        newStatus: BarcodeStatus.UNASSIGNED,
+        userId,
+        remarks: `Bulk generated with prefix ${prefix}`
+      }));
+
+      await prisma.barcodeHistory.createMany({ data: historyData });
+    }
+
+    return {
+      totalRequested: quantity,
+      totalCreated: createdBarcodes.length,
+      totalSkipped: skippedBarcodes.length,
+      createdBarcodes: createdBarcodes.slice(0, 50),
+      skippedBarcodes: skippedBarcodes.slice(0, 50)
+    };
+  }
+
+  /**
+   * Import CSV/Excel rows
+   */
+  static async importBarcodes(rows: ImportBarcodeRow[], companyId: string, userId: string) {
+    let createdCount = 0;
+    let skippedCount = 0;
+    const errors: Array<{ row: number; barcode: string; reason: string }> = [];
+
+    // Pre-fetch site, branch, warehouse mapping by code for efficiency
+    const [sites, branches, warehouses] = await Promise.all([
+      prisma.site.findMany({ where: { companyId }, select: { id: true, code: true } }),
+      prisma.branch.findMany({ where: { companyId }, select: { id: true, code: true } }),
+      prisma.warehouse.findMany({ where: { companyId }, select: { id: true, code: true } })
+    ]);
+
+    const siteMap = new Map(sites.map(s => [s.code.toUpperCase(), s.id]));
+    const branchMap = new Map(branches.map(b => [b.code.toUpperCase(), b.id]));
+    const warehouseMap = new Map(warehouses.map(w => [w.code.toUpperCase(), w.id]));
+
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const rawBarcode = (row.barcode || '').trim().toUpperCase();
+
+      if (!rawBarcode) {
+        errors.push({ row: index + 1, barcode: '', reason: 'Barcode value missing' });
+        continue;
+      }
+
+      if (!row.type || !Object.values(BarcodeType).includes(row.type)) {
+        errors.push({ row: index + 1, barcode: rawBarcode, reason: `Invalid Barcode Type. Allowed: LOCATION, BOX, FILE_RECORD` });
+        continue;
+      }
+
+      const siteId = row.siteCode ? siteMap.get(row.siteCode.trim().toUpperCase()) : undefined;
+      const branchId = row.branchCode ? branchMap.get(row.branchCode.trim().toUpperCase()) : undefined;
+      const warehouseId = row.warehouseCode ? warehouseMap.get(row.warehouseCode.trim().toUpperCase()) : undefined;
+
+      try {
+        await this.create({
+          companyId,
+          siteId,
+          branchId,
+          warehouseId,
+          barcode: rawBarcode,
+          type: row.type,
+          status: row.status || BarcodeStatus.UNASSIGNED,
+          remarks: row.remarks || 'Imported via CSV/Excel'
+        }, userId);
+        createdCount++;
+      } catch (err: any) {
+        if (err.code === ErrorCode.DUPLICATE_CODE || err.message?.includes('already exists')) {
+          skippedCount++;
+        } else {
+          errors.push({ row: index + 1, barcode: rawBarcode, reason: err.message || 'Error creating barcode' });
+        }
+      }
+    }
+
+    return {
+      totalRows: rows.length,
+      createdCount,
+      skippedCount,
+      errorCount: errors.length,
+      errors
+    };
+  }
+
+  /**
+   * Bulk actions (activate, deactivate, delete)
+   */
+  static async bulkAction(ids: string[], action: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE', userId: string) {
+    if (!ids || ids.length === 0) {
+      return { count: 0 };
+    }
+
+    if (action === 'DELETE') {
+      const result = await prisma.barcodeMaster.deleteMany({
+        where: {
+          id: { in: ids },
+          isAssigned: false
+        }
+      });
+      return { count: result.count };
+    }
+
+    const newStatus = action === 'ACTIVATE' ? BarcodeStatus.UNASSIGNED : BarcodeStatus.INACTIVE;
+
+    const barcodes = await prisma.barcodeMaster.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, barcode: true, status: true }
+    });
+
+    await prisma.barcodeMaster.updateMany({
+      where: { id: { in: ids } },
+      data: { status: newStatus }
+    });
+
+    // Write history
+    const historyLogs = barcodes.map(b => ({
+      barcodeMasterId: b.id,
+      barcode: b.barcode,
+      action: action === 'ACTIVATE' ? 'ACTIVATED' : 'DEACTIVATED',
+      previousStatus: b.status,
+      newStatus,
+      userId,
+      remarks: `Bulk ${action.toLowerCase()} action`
+    }));
+
+    await prisma.barcodeHistory.createMany({ data: historyLogs });
+
+    return { count: barcodes.length };
+  }
+
+  /**
+   * Print Barcode Labels Payload
+   */
+  static async printBarcodes(ids: string[], userId: string) {
+    const barcodes = await prisma.barcodeMaster.findMany({
+      where: { id: { in: ids } },
+      include: {
+        company: { select: { name: true } },
+        site: { select: { name: true, code: true } },
+        warehouse: { select: { name: true, code: true } }
+      }
+    });
+
+    if (barcodes.length === 0) {
+      throw new Error('No barcodes found for printing.');
+    }
+
+    // Write print history
+    const historyLogs = barcodes.map(b => ({
+      barcodeMasterId: b.id,
+      barcode: b.barcode,
+      action: 'PRINTED',
+      userId,
+      remarks: 'Barcode label printed'
+    }));
+
+    await prisma.barcodeHistory.createMany({ data: historyLogs });
+
+    // Generate ZPL & JSON format for printers
+    const labels = barcodes.map(b => ({
+      id: b.id,
+      barcode: b.barcode,
+      type: b.type,
+      status: b.status,
+      company: b.company.name,
+      site: b.site?.name || '',
+      warehouse: b.warehouse?.name || '',
+      zpl: `^XA^FO50,50^BY2^BCN,100,Y,N,N^FD${b.barcode}^FS^XZ`
+    }));
+
+    return { total: labels.length, labels };
+  }
+
+  /**
+   * Validate Barcode (Scanning API)
+   */
+  static async validateBarcode(barcode: string, companyId: string, userId?: string) {
+    const cleanBarcode = barcode.trim().toUpperCase();
+
+    // Check Company preferences for dynamic barcode registration
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { preferences: true }
+    });
+
+    const preferences: any = company?.preferences || {};
+    const allowDynamicRegistration = preferences.allowDynamicBarcodeRegistration === true;
+
+    // Check BarcodeMaster
+    const master = await prisma.barcodeMaster.findUnique({
+      where: { barcode: cleanBarcode },
+      include: {
+        site: { select: { name: true, code: true } },
+        warehouse: { select: { name: true, code: true } }
+      }
+    });
+
+    if (!master) {
+      // Search in physical tables (Box, FileRecord, Location)
+      const [box, file, loc] = await Promise.all([
+        prisma.box.findUnique({ where: { barcode: cleanBarcode }, include: { currentLocation: true } }),
+        prisma.fileRecord.findUnique({ where: { barcode: cleanBarcode }, include: { box: true } }),
+        prisma.location.findUnique({ where: { barcode: cleanBarcode }, include: { shelf: { include: { rack: { include: { room: true } } } } } })
+      ]);
+
+      if (box || file || loc) {
+        let type: BarcodeType = BarcodeType.BOX;
+        let object: any = null;
+
+        if (box) {
+          type = BarcodeType.BOX;
+          object = { id: box.id, barcode: box.barcode, status: box.status, location: box.currentLocation?.name || null };
+        } else if (file) {
+          type = BarcodeType.FILE_RECORD;
+          object = { id: file.id, barcode: file.barcode, status: file.status, boxBarcode: file.box.barcode };
+        } else if (loc) {
+          type = BarcodeType.LOCATION;
+          object = { id: loc.id, barcode: loc.barcode, name: loc.name, isOccupied: loc.isOccupied };
+        }
+
+        return {
+          valid: true,
+          status: 'Barcode Verified',
+          exists: true,
+          type,
+          barcodeStatus: BarcodeStatus.ASSIGNED,
+          isAssigned: true,
+          object
+        };
+      }
+
+      if (!allowDynamicRegistration) {
+        return {
+          valid: false,
+          status: 'Barcode Unknown',
+          message: 'This barcode is not registered.',
+          exists: false
+        };
+      }
+
+      return {
+        valid: true,
+        status: 'Unregistered Barcode (Dynamic Allowed)',
+        exists: false,
+        canRegister: true
+      };
+    }
+
+    if (master.status === BarcodeStatus.INACTIVE) {
+      return {
+        valid: false,
+        status: 'Barcode Inactive',
+        message: 'Barcode inactive.',
+        exists: true,
+        type: master.type,
+        barcodeStatus: master.status
+      };
+    }
+
+    if (master.isAssigned || master.status === BarcodeStatus.ASSIGNED) {
+      return {
+        valid: true,
+        status: 'Barcode Verified',
+        message: 'Barcode already assigned.',
+        exists: true,
+        type: master.type,
+        barcodeStatus: master.status,
+        isAssigned: true,
+        assignedToType: master.assignedToType,
+        assignedToId: master.assignedToId
+      };
+    }
+
+    return {
+      valid: true,
+      status: 'Barcode Verified',
+      message: 'Barcode is registered and available.',
+      exists: true,
+      type: master.type,
+      barcodeStatus: master.status,
+      isAssigned: false
+    };
+  }
+}

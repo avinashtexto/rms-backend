@@ -46,6 +46,21 @@ enum BarcodeEntityType {
   DEVICE
 }
 
+enum BarcodeType {
+  LOCATION
+  BOX
+  FILE_RECORD
+}
+
+enum BarcodeStatus {
+  ACTIVE
+  INACTIVE
+  ASSIGNED
+  UNASSIGNED
+  LOST
+  DESTROYED
+}
+
 enum BoxStatus {
   ACTIVE
   MERGED
@@ -109,6 +124,12 @@ enum WorkflowAction {
   TRANSFER_INITIATE
   TRANSFER_ACCEPT
   LOCATION_OVERRIDE
+  BARCODE_CREATED
+  BARCODE_UPDATED
+  BARCODE_DELETED
+  BARCODE_GENERATED
+  BARCODE_IMPORTED
+  BARCODE_PRINTED
 }
 
 enum SyncStatus {
@@ -171,6 +192,7 @@ model Company {
   auditLogs     AuditLog[]
   notifications Notification[]
   reasonCodes   ReasonCode[]
+  barcodes      BarcodeMaster[]
 
   @@map("companies")
 }
@@ -191,8 +213,9 @@ model Branch {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
-  sites   Site[]
+  company  Company         @relation(fields: [companyId], references: [id])
+  sites    Site[]
+  barcodes BarcodeMaster[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -214,8 +237,9 @@ model Site {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branch     Branch      @relation(fields: [branchId], references: [id])
+  branch     Branch          @relation(fields: [branchId], references: [id])
   warehouses Warehouse[]
+  barcodes   BarcodeMaster[]
 
   @@unique([branchId, code])
   @@index([companyId])
@@ -240,12 +264,13 @@ model Warehouse {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  site          Site?       @relation(fields: [siteId], references: [id])
-  rooms         Room[]
-  gpsTracks     GpsTrack[]
+  site            Site?                     @relation(fields: [siteId], references: [id])
+  rooms           Room[]
+  gpsTracks       GpsTrack[]
   userAssignments UserWarehouseAssignment[]
-  transfersFrom Transfer[] @relation("TransferFromWarehouse")
-  transfersTo   Transfer[] @relation("TransferToWarehouse")
+  transfersFrom   Transfer[]                @relation("TransferFromWarehouse")
+  transfersTo     Transfer[]                @relation("TransferToWarehouse")
+  barcodes        BarcodeMaster[]
 
   @@unique([siteId, code])
   @@index([companyId])
@@ -441,6 +466,8 @@ model User {
   transfersAccepted      Transfer[]                     @relation("TransferAcceptedBy")
   locationOverrides      LocationOverride[]
   syncConflicts          SyncConflict[]
+  createdBarcodes        BarcodeMaster[]
+  barcodeHistories       BarcodeHistory[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -871,4 +898,62 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+// ============================================================
+// BARCODE MASTER MANAGEMENT
+// ============================================================
+
+model BarcodeMaster {
+  id             String        @id @default(uuid())
+  barcode        String        @unique
+  type           BarcodeType
+  status         BarcodeStatus @default(UNASSIGNED)
+  companyId      String
+  siteId         String?
+  branchId       String?
+  warehouseId    String?
+  isAssigned     Boolean       @default(false)
+  assignedToType String?       // e.g. "LOCATION", "BOX", "FILE_RECORD"
+  assignedToId   String?       // UUID or Barcode string
+  assignedAt     DateTime?
+  createdById    String
+  remarks        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  site      Site?      @relation(fields: [siteId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+  createdBy User       @relation(fields: [createdById], references: [id])
+
+  history BarcodeHistory[]
+
+  @@index([companyId])
+  @@index([type])
+  @@index([status])
+  @@index([barcode])
+  @@map("barcode_masters")
+}
+
+model BarcodeHistory {
+  id              String         @id @default(uuid())
+  barcodeMasterId String
+  barcode         String
+  action          String         // CREATED, UPDATED, ASSIGNED, UNASSIGNED, STATUS_CHANGED, PRINTED, SCANNED, IMPORTED, DELETED
+  previousStatus  BarcodeStatus?
+  newStatus       BarcodeStatus?
+  userId          String?
+  ipAddress       String?
+  deviceInfo      String?
+  remarks         String?
+  createdAt       DateTime       @default(now())
+
+  barcodeMaster BarcodeMaster @relation(fields: [barcodeMasterId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id])
+
+  @@index([barcodeMasterId])
+  @@index([barcode])
+  @@map("barcode_histories")
 }
