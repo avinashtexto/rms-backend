@@ -13,4 +13,9 @@ router.post('/', requirePermission('room:manage') as any, RoomController.createR
 router.put('/:id', requirePermission('room:manage') as any, RoomController.updateRoom as any);
 router.delete('/:id', requirePermission('room:manage') as any, RoomController.deleteRoom as any);
 
+// Row sub-routes
+router.get('/:roomId/rows', requirePermission('room:view') as any, RoomController.listRows as any);
+router.post('/:roomId/rows', requirePermission('room:manage') as any, RoomController.createRow as any);
+router.delete('/:roomId/rows/:rowId', requirePermission('room:manage') as any, RoomController.deleteRow as any);
+
 export default router;

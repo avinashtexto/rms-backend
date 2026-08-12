@@ -10,7 +10,7 @@ export interface ListBarcodesQuery {
   warehouseId?: string;
   type?: BarcodeType;
   status?: BarcodeStatus;
-  isAssigned?: boolean;
+  isAssigned?: boolean | string;
   search?: string;
   startDate?: string;
   endDate?: string;
@@ -137,12 +137,16 @@ export class BarcodeMasterService {
 
     const initialStatus = isAssigned ? BarcodeStatus.ASSIGNED : (data.status || BarcodeStatus.UNASSIGNED);
 
+    const siteId = data.siteId && data.siteId.trim() ? data.siteId.trim() : undefined;
+    const branchId = data.branchId && data.branchId.trim() ? data.branchId.trim() : undefined;
+    const warehouseId = data.warehouseId && data.warehouseId.trim() ? data.warehouseId.trim() : undefined;
+
     const barcodeObj = await prisma.barcodeMaster.create({
       data: {
         companyId: data.companyId,
-        siteId: data.siteId,
-        branchId: data.branchId,
-        warehouseId: data.warehouseId,
+        siteId,
+        branchId,
+        warehouseId,
         barcode: cleanBarcode,
         type: data.type,
         status: initialStatus,
@@ -192,7 +196,9 @@ export class BarcodeMasterService {
     if (query.warehouseId) where.warehouseId = query.warehouseId;
     if (query.type) where.type = query.type;
     if (query.status) where.status = query.status;
-    if (query.isAssigned !== undefined) where.isAssigned = String(query.isAssigned) === 'true';
+    if (query.isAssigned !== undefined && query.isAssigned !== null) {
+      where.isAssigned = String(query.isAssigned) === 'true';
+    }
 
     if (query.startDate || query.endDate) {
       where.createdAt = {};
@@ -201,9 +207,17 @@ export class BarcodeMasterService {
     }
 
     if (query.search) {
-      where.OR = [
-        { barcode: { contains: query.search.trim(), mode: 'insensitive' } },
-        { remarks: { contains: query.search.trim(), mode: 'insensitive' } }
+      const term = query.search.trim();
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { barcode: { contains: term, mode: 'insensitive' } },
+            { remarks: { contains: term, mode: 'insensitive' } },
+            { assignedToType: { contains: term, mode: 'insensitive' } },
+            { assignedToId: { contains: term, mode: 'insensitive' } },
+          ]
+        }
       ];
     }
 
@@ -238,9 +252,14 @@ export class BarcodeMasterService {
   /**
    * Get single barcode details & history timeline
    */
-  static async getById(id: string) {
-    const barcodeObj = await prisma.barcodeMaster.findUnique({
-      where: { id },
+  static async getById(idOrBarcode: string) {
+    const barcodeObj = await prisma.barcodeMaster.findFirst({
+      where: {
+        OR: [
+          { id: idOrBarcode },
+          { barcode: idOrBarcode }
+        ]
+      },
       include: {
         company: { select: { id: true, name: true, code: true } },
         site: { select: { id: true, name: true, code: true } },
@@ -256,14 +275,55 @@ export class BarcodeMasterService {
       }
     });
 
-    if (!barcodeObj) {
-      const err: AppError = new Error('Barcode not found');
-      err.statusCode = 404;
-      err.code = ErrorCode.NOT_FOUND;
-      throw err;
+    if (barcodeObj) {
+      return barcodeObj;
     }
 
-    return barcodeObj;
+    // Fallback 1: Check Box by ID or Barcode
+    const box = await prisma.box.findFirst({
+      where: { OR: [{ id: idOrBarcode }, { barcode: idOrBarcode }] },
+      include: { client: true, department: true }
+    });
+
+    if (box) {
+      return {
+        id: box.id,
+        barcode: box.barcode,
+        type: 'BOX',
+        status: box.status || 'ASSIGNED',
+        isAssigned: true,
+        assignedToType: 'BOX',
+        assignedToId: box.id,
+        remarks: box.description,
+        createdAt: box.createdAt,
+        history: []
+      };
+    }
+
+    // Fallback 2: Check FileRecord by ID or Barcode
+    const file = await prisma.fileRecord.findFirst({
+      where: { OR: [{ id: idOrBarcode }, { barcode: idOrBarcode }] }
+    });
+
+    if (file) {
+      return {
+        id: file.id,
+        barcode: file.barcode,
+        type: 'FILE',
+        status: file.status || 'ASSIGNED',
+        isAssigned: true,
+        assignedToType: 'FILE',
+        assignedToId: file.id,
+        remarks: file.title,
+        createdAt: file.createdAt,
+        history: []
+      };
+    }
+
+    const err: AppError = new Error('Barcode not found');
+    err.statusCode = 404;
+    err.code = ErrorCode.NOT_FOUND;
+    throw err;
   }
 
   /**
@@ -271,10 +331,13 @@ export class BarcodeMasterService {
    */
   static async update(id: string, data: {
     status?: BarcodeStatus;
-    siteId?: string;
-    branchId?: string;
-    warehouseId?: string;
-    remarks?: string;
+    siteId?: string | null;
+    branchId?: string | null;
+    warehouseId?: string | null;
+    isAssigned?: boolean;
+    assignedToType?: string | null;
+    assignedToId?: string | null;
+    remarks?: string | null;
   }, userId: string) {
     const existing = await prisma.barcodeMaster.findUnique({ where: { id } });
 
@@ -285,13 +348,24 @@ export class BarcodeMasterService {
       throw err;
     }
 
+    const siteId = data.siteId !== undefined ? (data.siteId && typeof data.siteId === 'string' && data.siteId.trim() ? data.siteId.trim() : null) : existing.siteId;
+    const branchId = data.branchId !== undefined ? (data.branchId && typeof data.branchId === 'string' && data.branchId.trim() ? data.branchId.trim() : null) : existing.branchId;
+    const warehouseId = data.warehouseId !== undefined ? (data.warehouseId && typeof data.warehouseId === 'string' && data.warehouseId.trim() ? data.warehouseId.trim() : null) : existing.warehouseId;
+    const isAssigned = data.isAssigned !== undefined ? Boolean(data.isAssigned) : existing.isAssigned;
+    const assignedToType = data.assignedToType !== undefined ? (data.assignedToType && typeof data.assignedToType === 'string' && data.assignedToType.trim() ? data.assignedToType.trim() : null) : existing.assignedToType;
+    const assignedToId = data.assignedToId !== undefined ? (data.assignedToId && typeof data.assignedToId === 'string' && data.assignedToId.trim() ? data.assignedToId.trim() : null) : existing.assignedToId;
+
     const updated = await prisma.barcodeMaster.update({
       where: { id },
       data: {
         status: data.status || existing.status,
-        siteId: data.siteId !== undefined ? data.siteId : existing.siteId,
-        branchId: data.branchId !== undefined ? data.branchId : existing.branchId,
-        warehouseId: data.warehouseId !== undefined ? data.warehouseId : existing.warehouseId,
+        siteId,
+        branchId,
+        warehouseId,
+        isAssigned,
+        assignedToType,
+        assignedToId,
+        assignedAt: isAssigned ? (existing.assignedAt || new Date()) : null,
         remarks: data.remarks !== undefined ? data.remarks : existing.remarks
       },
       include: {
@@ -308,7 +382,7 @@ export class BarcodeMasterService {
         barcode: existing.barcode,
         action: 'UPDATED',
         previousStatus: existing.status,
-        newStatus: data.status || existing.status,
+        newStatus: updated.status,
         userId,
         remarks: data.remarks || 'Barcode updated'
       }
@@ -345,7 +419,10 @@ export class BarcodeMasterService {
    * Bulk Auto-Generation of Barcodes
    */
   static async bulkGenerate(params: BulkGenerateParams, userId: string) {
-    const { companyId, siteId, branchId, warehouseId, type, prefix, startingNumber, quantity, remarks } = params;
+    const { companyId, type, prefix, startingNumber, quantity, remarks } = params;
+    const siteId = params.siteId && params.siteId.trim() ? params.siteId.trim() : undefined;
+    const branchId = params.branchId && params.branchId.trim() ? params.branchId.trim() : undefined;
+    const warehouseId = params.warehouseId && params.warehouseId.trim() ? params.warehouseId.trim() : undefined;
 
     if (quantity < 1 || quantity > 10000) {
       const err: AppError = new Error('Quantity must be between 1 and 10,000');
@@ -538,6 +615,44 @@ export class BarcodeMasterService {
       remarks: `Bulk ${action.toLowerCase()} action`
     }));
 
+    await prisma.barcodeHistory.createMany({ data: historyLogs });
+
+    return { count: barcodes.length };
+  }
+
+  /**
+   * Bulk assign barcodes to a warehouse / site / branch
+   */
+  static async bulkAssign(
+    ids: string[],
+    data: { warehouseId?: string | null; siteId?: string | null; branchId?: string | null },
+    userId: string
+  ) {
+    if (!ids || ids.length === 0) return { count: 0 };
+
+    const barcodes = await prisma.barcodeMaster.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, barcode: true, status: true }
+    });
+
+    await prisma.barcodeMaster.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        warehouseId: data.warehouseId ?? null,
+        siteId: data.siteId ?? null,
+        branchId: data.branchId ?? null,
+      }
+    });
+
+    const historyLogs = barcodes.map(b => ({
+      barcodeMasterId: b.id,
+      barcode: b.barcode,
+      action: 'UPDATED',
+      previousStatus: b.status,
+      newStatus: b.status,
+      userId,
+      remarks: `Bulk assigned to warehouse/site/branch`
+    }));
     await prisma.barcodeHistory.createMany({ data: historyLogs });
 
     return { count: barcodes.length };

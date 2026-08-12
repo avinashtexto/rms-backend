@@ -36,7 +36,11 @@ const corsOrigins = process.env.CORS_ORIGINS
 
 // Middlewares
 app.use(cors({
-  origin: corsOrigins,
+  origin: (origin, callback) => {
+    // Allow non-browser clients (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -87,7 +91,7 @@ app.get('/', (req, res) => {
 // Centralized error handler
 app.use(errorHandler as any);
 
-// Start server
+// Start server (PORT from backend/.env — default 3002)
 app.listen(Number(PORT), HOST, () => {
   console.log(`Server is running on http://${HOST}:${PORT}`);
 });

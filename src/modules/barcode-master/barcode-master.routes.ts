@@ -20,6 +20,8 @@ router.post('/import', requirePermission('settings:manage') as any, BarcodeMaste
 router.get('/export', requirePermission('settings:view') as any, BarcodeMasterController.exportBarcodes as any);
 router.post('/print', requirePermission('settings:view') as any, BarcodeMasterController.printBarcodes as any);
 router.post('/bulk-action', requirePermission('settings:manage') as any, BarcodeMasterController.bulkAction as any);
+router.post('/bulk-assign', requirePermission('settings:manage') as any, BarcodeMasterController.bulkAssign as any);
+
 
 // Standard CRUD Endpoints
 router.get('/', requirePermission('settings:view') as any, BarcodeMasterController.list as any);

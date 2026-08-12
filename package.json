@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/app.js",
-    "dev": "npm run db:migrate && nodemon --exec ts-node -r tsconfig-paths/register src/app.ts",
+    "dev": "npm run db:migrate && PORT=3002 nodemon --exec ts-node -r tsconfig-paths/register src/app.ts",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "test": "jest --runInBand"

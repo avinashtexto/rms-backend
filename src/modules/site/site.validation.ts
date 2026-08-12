@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const listSitesQuerySchema = z.object({
-  page: z.preprocess((val) => parseInt(val as string, 10), z.number().int().min(1).default(1)),
-  pageSize: z.preprocess((val) => parseInt(val as string, 10), z.number().int().min(1).max(100).default(20))
+  page: z.preprocess((val) => (val === undefined || val === '' ? 1 : parseInt(val as string, 10)), z.number().int().min(1).default(1)),
+  pageSize: z.preprocess((val) => (val === undefined || val === '' ? 20 : parseInt(val as string, 10)), z.number().int().min(1).max(100).default(20))
 });
 
 export const createSiteSchema = z.object({

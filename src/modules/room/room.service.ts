@@ -7,7 +7,8 @@ export class RoomService {
     return prisma.room.findMany({
       where: warehouseId ? { warehouseId } : undefined,
       include: {
-        warehouse: true
+        warehouse: true,
+        rows: { orderBy: { code: 'asc' } }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -17,7 +18,8 @@ export class RoomService {
     const room = await prisma.room.findUnique({
       where: { id },
       include: {
-        warehouse: true
+        warehouse: true,
+        rows: { orderBy: { code: 'asc' } }
       }
     });
 
@@ -29,6 +31,55 @@ export class RoomService {
     }
 
     return room;
+  }
+
+  static async listRows(roomId: string) {
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) {
+      const error: AppError = new Error('Room not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.ROOM_NOT_FOUND;
+      throw error;
+    }
+    return prisma.row.findMany({
+      where: { roomId },
+      orderBy: { code: 'asc' }
+    });
+  }
+
+  static async createRow(roomId: string, name: string, code: string) {
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) {
+      const error: AppError = new Error('Room not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.ROOM_NOT_FOUND;
+      throw error;
+    }
+
+    const existing = await prisma.row.findUnique({
+      where: { roomId_code: { roomId, code: code.toUpperCase() } }
+    });
+    if (existing) {
+      const error: AppError = new Error(`Row code '${code}' already exists in this room`);
+      error.statusCode = 400;
+      error.code = ErrorCode.DUPLICATE_CODE;
+      throw error;
+    }
+
+    return prisma.row.create({
+      data: { roomId, name, code: code.toUpperCase() }
+    });
+  }
+
+  static async deleteRow(rowId: string) {
+    const row = await prisma.row.findUnique({ where: { id: rowId } });
+    if (!row) {
+      const error: AppError = new Error('Row not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+    return prisma.row.delete({ where: { id: rowId } });
   }
 
   static async createRoom(warehouseId: string, name: string, code: string, description?: string) {

@@ -24,6 +24,14 @@ export const resetPasswordSchema = z.object({
 export const listUsersQuerySchema = z.object({
   roleId: z.string().uuid().optional(),
   status: z.nativeEnum(UserStatus).optional(),
-  page: z.preprocess((val) => parseInt(val as string, 10), z.number().int().min(1).default(1)),
-  pageSize: z.preprocess((val) => parseInt(val as string, 10), z.number().int().min(1).max(100).default(20))
+  page: z.preprocess((val) => {
+    if (val === undefined || val === '' || val === null) return 1;
+    const n = parseInt(val as string, 10);
+    return isNaN(n) ? 1 : n;
+  }, z.number().int().min(1).default(1)),
+  pageSize: z.preprocess((val) => {
+    if (val === undefined || val === '' || val === null) return 20;
+    const n = parseInt(val as string, 10);
+    return isNaN(n) ? 20 : n;
+  }, z.number().int().min(1).max(100).default(20))
 });

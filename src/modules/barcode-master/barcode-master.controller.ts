@@ -39,7 +39,7 @@ export class BarcodeMasterController {
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const companyId = (req as any).user.companyId;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const barcodeObj = await BarcodeMasterService.create({
         ...req.body,
         companyId
@@ -53,7 +53,7 @@ export class BarcodeMasterController {
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const updated = await BarcodeMasterService.update(id, req.body, userId);
       res.json({ success: true, data: updated, message: 'Barcode updated successfully.' });
     } catch (err) {
@@ -64,7 +64,7 @@ export class BarcodeMasterController {
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const result = await BarcodeMasterService.delete(id, userId);
       res.json(result);
     } catch (err) {
@@ -75,7 +75,7 @@ export class BarcodeMasterController {
   static async bulkGenerate(req: Request, res: Response, next: NextFunction) {
     try {
       const companyId = (req as any).user.companyId;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const result = await BarcodeMasterService.bulkGenerate({
         ...req.body,
         companyId
@@ -89,7 +89,7 @@ export class BarcodeMasterController {
   static async importBarcodes(req: Request, res: Response, next: NextFunction) {
     try {
       const companyId = (req as any).user.companyId;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const rows = req.body.rows || req.body;
       const result = await BarcodeMasterService.importBarcodes(rows, companyId, userId);
       res.json({ success: true, data: result, message: 'Barcode import processed.' });
@@ -111,7 +111,7 @@ export class BarcodeMasterController {
 
   static async bulkAction(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const { ids, action } = req.body;
       const result = await BarcodeMasterService.bulkAction(ids, action, userId);
       res.json({ success: true, data: result, message: `Bulk action ${action} executed.` });
@@ -120,9 +120,20 @@ export class BarcodeMasterController {
     }
   }
 
+  static async bulkAssign(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user.id || (req as any).user.userId;
+      const { ids, warehouseId, siteId, branchId } = req.body;
+      const result = await BarcodeMasterService.bulkAssign(ids, { warehouseId, siteId, branchId }, userId);
+      res.json({ success: true, data: result, message: `${result.count} barcode(s) assigned successfully.` });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async printBarcodes(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const { ids } = req.body;
       const result = await BarcodeMasterService.printBarcodes(ids, userId);
       res.json({ success: true, data: result });
@@ -134,7 +145,7 @@ export class BarcodeMasterController {
   static async validateBarcode(req: Request, res: Response, next: NextFunction) {
     try {
       const companyId = (req as any).user.companyId;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user.id || (req as any).user.userId;
       const barcode = req.body.barcode || req.query.barcode;
 
       if (!barcode) {

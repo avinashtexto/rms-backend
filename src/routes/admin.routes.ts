@@ -28,12 +28,24 @@ import inventoryVerifyRoutes from '../modules/workflow/inventory-verify.routes';
 import refileRoutes from '../modules/workflow/refile.routes';
 import custodyMoveRoutes from '../modules/workflow/custody-move.routes';
 import barcodeMasterRoutes from '../modules/barcode-master/barcode-master.routes';
+import rackTemplateRoutes from '../modules/rack-template/rack-template.routes';
+import boxTypeRoutes from '../modules/box-type/box-type.routes';
+import fileTypeRoutes from '../modules/file-type/file-type.routes';
+import vendorRoutes from '../modules/vendor/vendor.routes';
+import workOrderRoutes from '../modules/work-order/work-order.routes';
+import inventoryMovementRoutes from '../modules/inventory-movement/inventory-movement.routes';
 
 const adminRouter = Router();
 
 // Mount individual domain route groups
 adminRouter.use('/auth', authRoutes);
 adminRouter.use('/barcode', barcodeMasterRoutes);
+adminRouter.use('/rack-templates', rackTemplateRoutes);
+adminRouter.use('/box-types', boxTypeRoutes);
+adminRouter.use('/file-types', fileTypeRoutes);
+adminRouter.use('/vendors', vendorRoutes);
+adminRouter.use('/work-orders', workOrderRoutes);
+adminRouter.use('/inventory-movements', inventoryMovementRoutes);
 adminRouter.use('/companies', companyRoutes);
 adminRouter.use('/warehouses', warehouseRoutes);
 adminRouter.use('/users', userRoutes);

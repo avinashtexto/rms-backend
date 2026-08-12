@@ -211,8 +211,23 @@ export class BoxService {
       throw error;
     }
 
-    return prisma.box.delete({
-      where: { id: boxId }
+    return prisma.$transaction(async (tx) => {
+      // 1. Cascade-delete InventoryVerificationScans first (depends on InventoryVerificationSession & FileRecord)
+      await tx.inventoryVerificationScan.deleteMany({ where: { boxId } });
+      // 2. Delete InventoryVerificationSessions
+      await tx.inventoryVerificationSession.deleteMany({ where: { boxId } });
+      // 3. Delete FreshBoxMoveScans
+      await tx.freshBoxMoveScan.deleteMany({ where: { boxId } });
+      // 4. Delete Transfers linked to this box
+      await tx.transfer.deleteMany({ where: { boxId } });
+      // 5. Clear AuditLog entries
+      await tx.auditLog.deleteMany({ where: { boxId } });
+      // 6. Delete FileRecords (has FK to Box, must come after their own dependents)
+      await tx.fileRecord.deleteMany({ where: { boxId } });
+      // 7. Finally delete the Box
+      return tx.box.delete({
+        where: { id: boxId }
+      });
     });
   }
 

@@ -193,6 +193,12 @@ model Company {
   notifications Notification[]
   reasonCodes   ReasonCode[]
   barcodes      BarcodeMaster[]
+  rackTemplates RackTemplate[]
+  boxTypes      BoxType[]
+  fileTypes     FileType[]
+  vendors       Vendor[]
+  workOrders    WorkOrder[]
+  inventoryMovements InventoryMovementHistory[]
 
   @@map("companies")
 }
@@ -290,6 +296,7 @@ model Room {
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   racks     Rack[]
+  rows      Row[]
 
   @@unique([warehouseId, code])
   @@index([barcode])
@@ -306,8 +313,11 @@ model Rack {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  room    Room    @relation(fields: [roomId], references: [id])
-  shelves Shelf[]
+  rowId     String?
+  row       Row?    @relation(fields: [rowId], references: [id])
+  room      Room    @relation(fields: [roomId], references: [id])
+  shelves   Shelf[]
+  levels    Level[]
 
   @@unique([roomId, code])
   @@index([barcode])
@@ -334,6 +344,7 @@ model Shelf {
 model Location {
   id         String   @id @default(uuid())
   shelfId    String
+  levelId    String?
   name       String
   barcode    String   @unique
   isOccupied Boolean  @default(false)
@@ -341,7 +352,8 @@ model Location {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  shelf Shelf @relation(fields: [shelfId], references: [id])
+  shelf Shelf  @relation(fields: [shelfId], references: [id])
+  level Level? @relation(fields: [levelId], references: [id])
 
   // exactly one currently-active box may point here (enforced in service layer via transaction)
   currentBox Box?
@@ -468,6 +480,7 @@ model User {
   syncConflicts          SyncConflict[]
   createdBarcodes        BarcodeMaster[]
   barcodeHistories       BarcodeHistory[]
+  workOrders             WorkOrder[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -591,9 +604,13 @@ model FileRecord {
   companyId String
   boxId     String
   barcode   String           @unique
-  title     String?
-  status    FileRecordStatus @default(ACTIVE)
-  createdAt DateTime         @default(now())
+  title          String?
+  status         FileRecordStatus @default(ACTIVE)
+  retentionYears Int?
+  expiryDate     DateTime?
+  vendorId       String?
+  fileTypeId     String?
+  createdAt      DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
   box Box @relation(fields: [boxId], references: [id])
@@ -957,3 +974,200 @@ model BarcodeHistory {
   @@index([barcode])
   @@map("barcode_histories")
 }
+
+// ============================================================
+// WMS DYNAMIC MASTERS & WORK ORDERS
+// ============================================================
+
+model Row {
+  id        String   @id @default(uuid())
+  roomId    String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room  Room   @relation(fields: [roomId], references: [id])
+  racks Rack[]
+
+  @@unique([roomId, code])
+  @@map("rows")
+}
+
+model Level {
+  id        String   @id @default(uuid())
+  rackId    String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rack      Rack       @relation(fields: [rackId], references: [id])
+  locations Location[]
+
+  @@unique([rackId, code])
+  @@map("levels")
+}
+
+model RackTemplate {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  code        String
+  description String?
+  rowsCount   Int      @default(1)
+  racksCount  Int      @default(1)
+  levelsCount Int      @default(1)
+  locRows     Int      @default(3)
+  locCols     Int      @default(3)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@map("rack_templates")
+}
+
+model BoxType {
+  id              String   @id @default(uuid())
+  companyId       String
+  name            String
+  code            String
+  description     String?
+  defaultCapacity Int      @default(25)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@map("box_types")
+}
+
+model FileType {
+  id                    String   @id @default(uuid())
+  companyId             String
+  name                  String
+  code                  String
+  description           String?
+  defaultRetentionYears Int      @default(5)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@map("file_types")
+}
+
+model Vendor {
+  id           String   @id @default(uuid())
+  companyId    String
+  name         String
+  code         String
+  contactEmail String?
+  phone        String?
+  address      String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@map("vendors")
+}
+
+enum WorkOrderType {
+  PICKUP
+  RETURN
+  DESTROY
+  ARCHIVE
+  TRANSFER
+  BULK_MOVEMENT
+}
+
+enum WorkOrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model WorkOrder {
+  id             String            @id @default(uuid())
+  companyId      String
+  orderNumber    String            @unique
+  type           WorkOrderType
+  status         WorkOrderStatus   @default(PENDING)
+  priority       WorkOrderPriority @default(MEDIUM)
+  assignedUserId String?
+  startDate      DateTime?
+  endDate        DateTime?
+  remarks        String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  company      Company         @relation(fields: [companyId], references: [id])
+  assignedUser User?           @relation(fields: [assignedUserId], references: [id])
+  items        WorkOrderItem[]
+
+  @@map("work_orders")
+}
+
+model WorkOrderItem {
+  id          String   @id @default(uuid())
+  workOrderId String
+  barcode     String
+  entityType  String   // "BOX" or "FILE_RECORD"
+  status      String   @default("PENDING")
+  remarks     String?
+  createdAt   DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@map("work_order_items")
+}
+
+enum InventoryMovementAction {
+  TEMP_OUT
+  RETURN
+  PERM_OUT
+  DESTROY
+  MOVE
+}
+
+model InventoryMovementHistory {
+  id             String                  @id @default(uuid())
+  companyId      String
+  barcode        String
+  entityType     String                  // "BOX" or "FILE_RECORD"
+  action         InventoryMovementAction
+  fromLocationId String?
+  toLocationId   String?
+  issuedTo       String?
+  approvedBy     String?
+  reason         String?
+  remarks        String?
+  documentUrl    String?
+  performedById  String?
+  createdAt      DateTime                @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, barcode])
+  @@map("inventory_movement_histories")
+}
+
