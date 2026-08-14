@@ -1,7 +1,15 @@
 import { Response, NextFunction } from 'express';
 import { AuthService } from './auth.service';
-import { loginSchema, refreshSchema, deviceBindSchema } from './auth.validation';
+import {
+  loginSchema,
+  refreshSchema,
+  deviceBindSchema,
+  switchWarehouseSchema,
+  switchBranchSchema,
+  switchCompanySchema
+} from './auth.validation';
 import { AuthenticatedRequest } from './auth.types';
+import { ADMIN_PANEL_ROLES } from './auth.constants';
 
 export class AuthController {
   static async login(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -18,10 +26,8 @@ export class AuthController {
         });
       }
 
-      // Check if this is a mobile login and enforce device validation
       const isMobile = req.originalUrl.includes('/mobile/');
       if (isMobile) {
-        // For mobile roles, device information is required
         if (!data.device) {
           return res.status(400).json({
             success: false,
@@ -35,7 +41,6 @@ export class AuthController {
 
       const result = await AuthService.login(email, data.password, data.device);
       
-      // Restrict admin login on mobile endpoints
       if (isMobile && (result.user.role === 'SUPER_ADMIN' || result.user.role === 'COMPANY_ADMIN')) {
         return res.status(403).json({
           success: false,
@@ -46,14 +51,13 @@ export class AuthController {
         });
       }
 
-      // Restrict non-admin login on admin endpoints
       const isAdmin = req.originalUrl.includes('/admin/');
-      if (isAdmin && (result.user.role !== 'SUPER_ADMIN' && result.user.role !== 'COMPANY_ADMIN')) {
+      if (isAdmin && !ADMIN_PANEL_ROLES.includes(result.user.role as (typeof ADMIN_PANEL_ROLES)[number])) {
         return res.status(403).json({
           success: false,
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Admin roles only.'
+            message: 'Admin panel access is not allowed for this role.'
           }
         });
       }
@@ -83,7 +87,7 @@ export class AuthController {
   static async logout(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = refreshSchema.parse(req.body);
-      await AuthService.logout(data.refreshToken);
+      await AuthService.logout(data.refreshToken, req.user?.id);
       res.status(200).json({
         success: true,
         data: { message: 'Logged out successfully' }
@@ -104,11 +108,99 @@ export class AuthController {
           }
         });
       }
-      const result = await AuthService.me(req.user.id);
+
+      const session = {
+        companyId: req.user.companyId,
+        branchId: req.user.branchId ?? null,
+        warehouseId: req.user.warehouseId ?? null
+      };
+
+      const result = await AuthService.me(req.user.id, session);
       res.status(200).json({
         success: true,
         data: result
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async permissions(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Not logged in'
+          }
+        });
+      }
+      const result = await AuthService.getPermissions(req.user.id, req.user.roleId);
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async switchWarehouse(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Not logged in' }
+        });
+      }
+      const data = switchWarehouseSchema.parse(req.body);
+      const result = await AuthService.switchWarehouse(req.user.id, data.warehouseId, {
+        companyId: req.user.companyId,
+        branchId: req.user.branchId ?? null,
+        warehouseId: req.user.warehouseId ?? null
+      });
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async switchBranch(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Not logged in' }
+        });
+      }
+      const data = switchBranchSchema.parse(req.body);
+      const result = await AuthService.switchBranch(req.user.id, data.branchId, {
+        companyId: req.user.companyId,
+        branchId: req.user.branchId ?? null,
+        warehouseId: req.user.warehouseId ?? null
+      });
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async switchCompany(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Not logged in' }
+        });
+      }
+      const data = switchCompanySchema.parse(req.body);
+      const result = await AuthService.switchCompany(req.user.id, data.companyId, {
+        companyId: req.user.companyId,
+        branchId: req.user.branchId ?? null,
+        warehouseId: req.user.warehouseId ?? null
+      });
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

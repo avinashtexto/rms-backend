@@ -24,3 +24,15 @@ export const deviceBindSchema = z.object({
   serialNumber: z.string().min(1),
   model: z.string().min(1)
 });
+
+export const switchWarehouseSchema = z.object({
+  warehouseId: z.string().uuid()
+});
+
+export const switchBranchSchema = z.object({
+  branchId: z.string().uuid()
+});
+
+export const switchCompanySchema = z.object({
+  companyId: z.string().uuid()
+});

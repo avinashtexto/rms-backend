@@ -1,0 +1,8 @@
+-- Auth audit workflow actions for login/session events
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_LOGIN';
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_LOGOUT';
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_REFRESH';
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_SWITCH_COMPANY';
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_SWITCH_BRANCH';
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_SWITCH_WAREHOUSE';
+ALTER TYPE "WorkflowAction" ADD VALUE 'AUTH_SESSION_EXPIRED';

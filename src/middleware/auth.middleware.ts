@@ -51,10 +51,9 @@ export const requireAuth = async (
       });
     }
 
-    // Verify user exists and is active
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      include: { role: true }
+      include: { role: true, company: true }
     });
 
     if (!user || user.status !== 'ACTIVE') {
@@ -68,11 +67,54 @@ export const requireAuth = async (
       });
     }
 
+    const tokenCompanyId = decoded.companyId ?? user.companyId;
+    if (user.company.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: ErrorCode.FORBIDDEN,
+          message: 'Company is inactive'
+        }
+      });
+    }
+
+    if (decoded.warehouseId) {
+      const warehouse = await prisma.warehouse.findFirst({
+        where: { id: decoded.warehouseId, companyId: tokenCompanyId, isActive: true }
+      });
+      if (!warehouse) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: ErrorCode.FORBIDDEN,
+            message: 'Invalid or inactive warehouse in session'
+          }
+        });
+      }
+    }
+
+    if (decoded.branchId) {
+      const branch = await prisma.branch.findFirst({
+        where: { id: decoded.branchId, companyId: tokenCompanyId, isActive: true, deletedAt: null }
+      });
+      if (!branch) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: ErrorCode.FORBIDDEN,
+            message: 'Invalid or inactive branch in session'
+          }
+        });
+      }
+    }
+
     req.user = {
       id: user.id,
-      companyId: user.companyId,
+      companyId: tokenCompanyId,
       roleId: user.roleId,
-      roleName: user.role.name
+      roleName: user.role.name,
+      branchId: decoded.branchId ?? null,
+      warehouseId: decoded.warehouseId ?? null
     };
 
     next();

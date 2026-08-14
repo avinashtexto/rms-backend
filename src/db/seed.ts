@@ -2,6 +2,7 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { RoleName } from '@prisma/client';
+import { WAREHOUSE_MANAGER_PERMISSION_KEYS } from '../modules/auth/auth.constants';
 
 async function main() {
   console.log('Seeding database with default Company, Roles, Permissions, and Admin...');
@@ -128,13 +129,38 @@ async function main() {
       }
     }
 
-    // Assign workflow permissions to mobile roles
-    if (roleData.name === RoleName.OPERATOR || roleData.name === RoleName.SUPERVISOR || roleData.name === RoleName.WAREHOUSE_MANAGER) {
-      const workflowPermissions = dbPermissions.filter(p => 
-        p.key.startsWith('workflow:') || 
-        p.key.startsWith('box:view') || 
-        p.key.startsWith('file:view') || 
-        p.key.startsWith('warehouse:view')
+    // Warehouse Manager: admin panel (warehouse-scoped) + mobile workflows
+    if (roleData.name === RoleName.WAREHOUSE_MANAGER) {
+      const wmPermissions = dbPermissions.filter((p) =>
+        WAREHOUSE_MANAGER_PERMISSION_KEYS.includes(
+          p.key as (typeof WAREHOUSE_MANAGER_PERMISSION_KEYS)[number]
+        )
+      );
+      for (const perm of wmPermissions) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: perm.id
+            }
+          },
+          update: {},
+          create: {
+            roleId: role.id,
+            permissionId: perm.id
+          }
+        });
+      }
+    }
+
+    // Operator / Supervisor: mobile workflow permissions only
+    if (roleData.name === RoleName.OPERATOR || roleData.name === RoleName.SUPERVISOR) {
+      const workflowPermissions = dbPermissions.filter(
+        (p) =>
+          p.key.startsWith('workflow:') ||
+          p.key.startsWith('box:view') ||
+          p.key.startsWith('file:view') ||
+          p.key.startsWith('warehouse:view')
       );
       for (const perm of workflowPermissions) {
         await prisma.rolePermission.upsert({
