@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
-import { BoxStatus, TransferStatus, WorkflowAction } from '@prisma/client';
+import { BoxStatus, TransferStatus, WorkflowAction, RoleName } from '@prisma/client';
 
 export class CustodyMoveService {
   static async segregateBox(
@@ -165,7 +165,9 @@ export class CustodyMoveService {
       boxBarcode: string;
       destinationLocation: string;
       reason?: string;
-    }
+    },
+    actorWarehouseId?: string | null,
+    roleName?: string
   ) {
     const box = await prisma.box.findFirst({
       where: { barcode: data.boxBarcode, companyId },
@@ -203,6 +205,15 @@ export class CustodyMoveService {
       error.statusCode = 404;
       error.code = ErrorCode.NOT_FOUND;
       throw error;
+    }
+
+    if (roleName !== RoleName.SUPER_ADMIN && roleName !== RoleName.COMPANY_ADMIN) {
+      if (actorWarehouseId && sourceWarehouse.id !== actorWarehouseId) {
+        const error: AppError = new Error('You do not have access to initiate transfers for boxes outside your assigned warehouse');
+        error.statusCode = 403;
+        error.code = ErrorCode.FORBIDDEN;
+        throw error;
+      }
     }
 
     // Find destination warehouse by name
@@ -282,7 +293,7 @@ export class CustodyMoveService {
     });
   }
 
-  static async acceptTransfer(companyId: string, operatorId: string, transferId: string) {
+  static async acceptTransfer(companyId: string, operatorId: string, transferId: string, actorWarehouseId?: string | null, roleName?: string) {
     const transfer = await prisma.transfer.findFirst({
       where: {
         id: transferId,
@@ -296,6 +307,15 @@ export class CustodyMoveService {
       error.statusCode = 404;
       error.code = ErrorCode.NOT_FOUND;
       throw error;
+    }
+
+    if (roleName !== RoleName.SUPER_ADMIN && roleName !== RoleName.COMPANY_ADMIN) {
+      if (actorWarehouseId && transfer.toWarehouseId !== actorWarehouseId) {
+        const error: AppError = new Error('You do not have access to accept transfers for this warehouse');
+        error.statusCode = 403;
+        error.code = ErrorCode.FORBIDDEN;
+        throw error;
+      }
     }
 
     if (transfer.status !== TransferStatus.PENDING_ACCEPTANCE) {
@@ -382,7 +402,7 @@ export class CustodyMoveService {
     }));
   }
 
-  static async completeTransfer(companyId: string, operatorId: string, transferId: string) {
+  static async completeTransfer(companyId: string, operatorId: string, transferId: string, actorWarehouseId?: string | null, roleName?: string) {
     const transfer = await prisma.transfer.findFirst({
       where: {
         id: transferId,
@@ -401,6 +421,15 @@ export class CustodyMoveService {
       error.statusCode = 404;
       error.code = ErrorCode.NOT_FOUND;
       throw error;
+    }
+
+    if (roleName !== RoleName.SUPER_ADMIN && roleName !== RoleName.COMPANY_ADMIN) {
+      if (actorWarehouseId && transfer.toWarehouseId !== actorWarehouseId) {
+        const error: AppError = new Error('You do not have access to complete transfers for this warehouse');
+        error.statusCode = 403;
+        error.code = ErrorCode.FORBIDDEN;
+        throw error;
+      }
     }
 
     if (transfer.status !== TransferStatus.ACCEPTED) {

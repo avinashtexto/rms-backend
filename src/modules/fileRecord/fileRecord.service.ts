@@ -3,11 +3,15 @@ import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 
 export class FileRecordService {
-  static async listFileRecords(boxId?: string, page: number = 1, pageSize: number = 20) {
+  static async listFileRecords(companyId: string, boxId?: string, page: number = 1, pageSize: number = 20) {
     const skip = (page - 1) * pageSize;
+    const where = {
+      companyId,
+      ...(boxId ? { boxId } : {})
+    };
     const [data, total] = await Promise.all([
       prisma.fileRecord.findMany({
-        where: boxId ? { boxId } : undefined,
+        where,
         include: {
           box: true
         },
@@ -15,9 +19,7 @@ export class FileRecordService {
         skip,
         take: pageSize
       }),
-      prisma.fileRecord.count({
-        where: boxId ? { boxId } : undefined
-      })
+      prisma.fileRecord.count({ where })
     ]);
 
     return {
@@ -31,9 +33,9 @@ export class FileRecordService {
     };
   }
 
-  static async getFileRecord(id: string) {
-    const fileRecord = await prisma.fileRecord.findUnique({
-      where: { id },
+  static async getFileRecord(id: string, companyId: string) {
+    const fileRecord = await prisma.fileRecord.findFirst({
+      where: { id, companyId },
       include: {
         box: true
       }
@@ -49,13 +51,13 @@ export class FileRecordService {
     return fileRecord;
   }
 
-  static async createFileRecord(boxId: string, barcode: string, title?: string, status: 'ACTIVE' | 'ARCHIVED' | 'DESTROYED' = 'ACTIVE') {
-    const box = await prisma.box.findUnique({
-      where: { id: boxId }
+  static async createFileRecord(companyId: string, boxId: string, barcode: string, title?: string, status: 'ACTIVE' | 'ARCHIVED' | 'DESTROYED' = 'ACTIVE') {
+    const box = await prisma.box.findFirst({
+      where: { id: boxId, companyId }
     });
 
     if (!box) {
-      const error: AppError = new Error('Box not found');
+      const error: AppError = new Error('Box not found or access denied');
       error.statusCode = 404;
       error.code = ErrorCode.BOX_NOT_FOUND;
       throw error;
@@ -73,32 +75,32 @@ export class FileRecordService {
     }
 
     return prisma.fileRecord.create({
-      data: { companyId: box.companyId, boxId, barcode, title, status },
+      data: { companyId, boxId, barcode, title, status },
       include: {
         box: true
       }
     });
   }
 
-  static async updateFileRecord(id: string, title?: string, status?: 'ACTIVE' | 'ARCHIVED' | 'DESTROYED', boxId?: string) {
-    const fileRecord = await prisma.fileRecord.findUnique({
-      where: { id }
+  static async updateFileRecord(id: string, companyId: string, title?: string, status?: 'ACTIVE' | 'ARCHIVED' | 'DESTROYED', boxId?: string) {
+    const fileRecord = await prisma.fileRecord.findFirst({
+      where: { id, companyId }
     });
 
     if (!fileRecord) {
-      const error: AppError = new Error('File record not found');
+      const error: AppError = new Error('File record not found or access denied');
       error.statusCode = 404;
       error.code = ErrorCode.FILE_RECORD_NOT_FOUND;
       throw error;
     }
 
     if (boxId) {
-      const box = await prisma.box.findUnique({
-        where: { id: boxId }
+      const box = await prisma.box.findFirst({
+        where: { id: boxId, companyId }
       });
 
       if (!box) {
-        const error: AppError = new Error('Box not found');
+        const error: AppError = new Error('Box not found or access denied');
         error.statusCode = 404;
         error.code = ErrorCode.BOX_NOT_FOUND;
         throw error;
@@ -118,13 +120,13 @@ export class FileRecordService {
     });
   }
 
-  static async deleteFileRecord(id: string) {
-    const fileRecord = await prisma.fileRecord.findUnique({
-      where: { id }
+  static async deleteFileRecord(id: string, companyId: string) {
+    const fileRecord = await prisma.fileRecord.findFirst({
+      where: { id, companyId }
     });
 
     if (!fileRecord) {
-      const error: AppError = new Error('File record not found');
+      const error: AppError = new Error('File record not found or access denied');
       error.statusCode = 404;
       error.code = ErrorCode.FILE_RECORD_NOT_FOUND;
       throw error;

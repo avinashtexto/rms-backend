@@ -33,7 +33,13 @@ export class CustodyMoveController {
       const companyId = req.user!.companyId;
       const operatorId = req.user!.id;
       const data = initiateTransferSchema.parse(req.body);
-      const transfer = await CustodyMoveService.initiateTransfer(companyId, operatorId, data);
+      const transfer = await CustodyMoveService.initiateTransfer(
+        companyId,
+        operatorId,
+        data,
+        req.user!.warehouseId,
+        req.user!.roleName
+      );
       res.status(201).json({ success: true, data: transfer });
     } catch (error) {
       next(error);
@@ -45,7 +51,13 @@ export class CustodyMoveController {
       const companyId = req.user!.companyId;
       const operatorId = req.user!.id;
       const transferId = req.params.transferId as string;
-      const transfer = await CustodyMoveService.acceptTransfer(companyId, operatorId, transferId);
+      const transfer = await CustodyMoveService.acceptTransfer(
+        companyId,
+        operatorId,
+        transferId,
+        req.user!.warehouseId,
+        req.user!.roleName
+      );
       res.status(200).json({ success: true, data: transfer });
     } catch (error) {
       next(error);
@@ -68,7 +80,13 @@ export class CustodyMoveController {
       const companyId = req.user!.companyId;
       const operatorId = req.user!.id;
       const transferId = req.params.id as string;
-      const transfer = await CustodyMoveService.completeTransfer(companyId, operatorId, transferId);
+      const transfer = await CustodyMoveService.completeTransfer(
+        companyId,
+        operatorId,
+        transferId,
+        req.user!.warehouseId,
+        req.user!.roleName
+      );
       res.status(200).json({ success: true, data: transfer });
     } catch (error) {
       next(error);

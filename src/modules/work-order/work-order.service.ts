@@ -45,14 +45,30 @@ export class WorkOrderService {
     });
   }
 
-  static async updateStatus(id: string, status: WorkOrderStatus) {
+  static async updateStatus(id: string, companyId: string, status: WorkOrderStatus) {
+    const existing = await prisma.workOrder.findFirst({
+      where: { id, companyId }
+    });
+    if (!existing) {
+      const error = new Error('Work order not found or access denied');
+      (error as any).statusCode = 404;
+      throw error;
+    }
     return prisma.workOrder.update({
       where: { id },
       data: { status }
     });
   }
 
-  static async delete(id: string) {
+  static async delete(id: string, companyId: string) {
+    const existing = await prisma.workOrder.findFirst({
+      where: { id, companyId }
+    });
+    if (!existing) {
+      const error = new Error('Work order not found or access denied');
+      (error as any).statusCode = 404;
+      throw error;
+    }
     return prisma.workOrder.delete({ where: { id } });
   }
 }

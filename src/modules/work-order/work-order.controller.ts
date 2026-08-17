@@ -16,16 +16,16 @@ export class WorkOrderController {
     } catch (err) { next(err); }
   }
 
-  static async updateStatus(req: Request, res: Response, next: NextFunction) {
+  static async updateStatus(req: any, res: Response, next: NextFunction) {
     try {
-      const data = await WorkOrderService.updateStatus(req.params.id as string, req.body.status);
+      const data = await WorkOrderService.updateStatus(req.params.id as string, req.user.companyId, req.body.status);
       res.json({ success: true, data });
     } catch (err) { next(err); }
   }
 
-  static async delete(req: Request, res: Response, next: NextFunction) {
+  static async delete(req: any, res: Response, next: NextFunction) {
     try {
-      await WorkOrderService.delete(req.params.id as string);
+      await WorkOrderService.delete(req.params.id as string, req.user.companyId);
       res.json({ success: true, message: 'Work order deleted' });
     } catch (err) { next(err); }
   }

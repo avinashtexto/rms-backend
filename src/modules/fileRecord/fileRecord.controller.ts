@@ -9,7 +9,7 @@ export class FileRecordController {
       const boxId = req.query.boxId as string | undefined;
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 20;
-      const result = await FileRecordService.listFileRecords(boxId, page, pageSize);
+      const result = await FileRecordService.listFileRecords(req.user!.companyId, boxId, page, pageSize);
       res.status(200).json({
         success: true,
         ...result
@@ -22,7 +22,7 @@ export class FileRecordController {
   static async getFileRecord(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const fileRecordId = req.params.fileRecordId as string;
-      const fileRecord = await FileRecordService.getFileRecord(fileRecordId);
+      const fileRecord = await FileRecordService.getFileRecord(fileRecordId, req.user!.companyId);
       res.status(200).json({
         success: true,
         data: fileRecord
@@ -35,7 +35,7 @@ export class FileRecordController {
   static async createFileRecord(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = createFileRecordSchema.parse(req.body);
-      const fileRecord = await FileRecordService.createFileRecord(data.boxId, data.barcode, data.title, data.status);
+      const fileRecord = await FileRecordService.createFileRecord(req.user!.companyId, data.boxId, data.barcode, data.title, data.status);
       res.status(201).json({
         success: true,
         data: fileRecord
@@ -49,7 +49,7 @@ export class FileRecordController {
     try {
       const fileRecordId = req.params.fileRecordId as string;
       const data = updateFileRecordSchema.parse(req.body);
-      const fileRecord = await FileRecordService.updateFileRecord(fileRecordId, data.title, data.status, data.boxId);
+      const fileRecord = await FileRecordService.updateFileRecord(fileRecordId, req.user!.companyId, data.title, data.status, data.boxId);
       res.status(200).json({
         success: true,
         data: fileRecord
@@ -62,7 +62,7 @@ export class FileRecordController {
   static async deleteFileRecord(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const fileRecordId = req.params.fileRecordId as string;
-      await FileRecordService.deleteFileRecord(fileRecordId);
+      await FileRecordService.deleteFileRecord(fileRecordId, req.user!.companyId);
       res.status(200).json({
         success: true,
         message: 'File record deleted successfully'

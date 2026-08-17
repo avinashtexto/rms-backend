@@ -244,6 +244,28 @@ async function main() {
 
   console.log('Created default Super Admin User:', adminUser.email);
 
+  // Create default Company Admin User
+  const companyAdminEmail = 'companyadmin@texto.com';
+  const companyAdminPassword = await bcrypt.hash('company123', 10);
+  const companyAdminUser = await prisma.user.upsert({
+    where: { email: companyAdminEmail },
+    update: {
+      passwordHash: companyAdminPassword,
+      employeeCode: 'EMPCO01',
+      roleId: roleMap[RoleName.COMPANY_ADMIN]
+    },
+    create: {
+      companyId: company.id,
+      roleId: roleMap[RoleName.COMPANY_ADMIN],
+      employeeCode: 'EMPCO01',
+      fullName: 'Company Administrator',
+      email: companyAdminEmail,
+      status: 'ACTIVE',
+      passwordHash: companyAdminPassword
+    }
+  });
+  console.log('Created default Company Admin User:', companyAdminUser.email);
+
   // Seeding Mobile Role Users
   const managerPassword = await bcrypt.hash('manager123', 10);
   const managerUser = await prisma.user.upsert({
