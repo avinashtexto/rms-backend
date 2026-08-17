@@ -3,9 +3,20 @@ import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 
 export class LocationService {
-  static async listLocations(shelfId?: string) {
+  static async listLocations(shelfId?: string, warehouseId?: string) {
     return prisma.location.findMany({
-      where: shelfId ? { shelfId } : undefined,
+      where: {
+        ...(shelfId && { shelfId }),
+        ...(warehouseId && {
+          shelf: {
+            rack: {
+              room: {
+                warehouseId
+              }
+            }
+          }
+        })
+      },
       include: {
         shelf: true
       },
