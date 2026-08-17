@@ -5,29 +5,30 @@ import { prisma } from '../lib/prisma';
 
 /** Route-level keys mapped to canonical seeded permission keys. */
 const PERMISSION_ALIASES: Record<string, string[]> = {
-  'room:view': ['storage:view'],
-  'room:manage': ['storage:manage'],
-  'rack:view': ['storage:view'],
-  'rack:manage': ['storage:manage'],
-  'shelf:view': ['storage:view'],
-  'shelf:manage': ['storage:manage'],
-  'location:view': ['storage:view'],
-  'location:manage': ['storage:manage'],
-  'rack-template:view': ['storage:view', 'settings:view'],
-  'rack-template:create': ['storage:manage', 'settings:view'],
-  'rack-template:update': ['storage:manage', 'settings:view'],
-  'rack-template:delete': ['storage:manage', 'settings:view'],
-  'rack-template:clone': ['storage:manage', 'settings:view'],
-  'rack-template:apply': ['storage:manage', 'settings:view'],
-  'rack-template:preview': ['storage:view', 'settings:view'],
+  'room:view': ['storage:view', 'warehouse:view'],
+  'room:manage': ['storage:manage', 'warehouse:manage'],
+  'rack:view': ['storage:view', 'warehouse:view'],
+  'rack:manage': ['storage:manage', 'warehouse:manage'],
+  'shelf:view': ['storage:view', 'warehouse:view'],
+  'shelf:manage': ['storage:manage', 'warehouse:manage'],
+  'location:view': ['storage:view', 'warehouse:view'],
+  'location:manage': ['storage:manage', 'warehouse:manage'],
+  'rack-template:view': ['storage:view', 'settings:view', 'warehouse:view'],
+  'rack-template:create': ['storage:manage', 'settings:view', 'warehouse:manage'],
+  'rack-template:update': ['storage:manage', 'settings:view', 'warehouse:manage'],
+  'rack-template:delete': ['storage:manage', 'settings:view', 'warehouse:manage'],
+  'rack-template:clone': ['storage:manage', 'settings:view', 'warehouse:manage'],
+  'rack-template:apply': ['storage:manage', 'storage:view', 'settings:view', 'warehouse:manage'],
+  'rack-template:preview': ['storage:view', 'settings:view', 'warehouse:view'],
   'report:generate': ['report:view'],
 };
 
-function acceptedPermissionKeys(permissionKey: string): string[] {
-  return [permissionKey, ...(PERMISSION_ALIASES[permissionKey] ?? [])];
+function acceptedPermissionKeys(permissionKey: string | string[]): string[] {
+  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  return Array.from(new Set(keys.flatMap((k) => [k, ...(PERMISSION_ALIASES[k] ?? [])])));
 }
 
-export const requirePermission = (permissionKey: string) => {
+export const requirePermission = (permissionKey: string | string[]) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {

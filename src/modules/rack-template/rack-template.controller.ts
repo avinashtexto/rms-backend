@@ -136,6 +136,18 @@ export class RackTemplateController {
   static async apply(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const body = applyRackTemplateSchema.parse(req.body);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+
+      if (isWarehouseManager && req.user?.warehouseId && body.warehouseId !== req.user.warehouseId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You can only apply rack templates to your assigned warehouse.'
+          }
+        });
+      }
+
       const data = await RackTemplateService.applyTemplate(
         req.params.id as string,
         req.user!.companyId,
@@ -143,7 +155,7 @@ export class RackTemplateController {
         body
       );
       res.json({ success: true, data });
-    } catch (err) {
+    } catch (err: any) {
       next(err);
     }
   }

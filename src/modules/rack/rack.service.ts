@@ -20,6 +20,9 @@ export class RackService {
             warehouse: true
           }
         },
+        levels: {
+          orderBy: { code: 'asc' }
+        },
         _count: {
           select: {
             shelves: true,
@@ -39,6 +42,9 @@ export class RackService {
           include: {
             warehouse: true
           }
+        },
+        levels: {
+          orderBy: { code: 'asc' }
         }
       }
     });
@@ -51,6 +57,129 @@ export class RackService {
     }
 
     return rack;
+  }
+
+  static async listLevels(rackId: string) {
+    const rack = await prisma.rack.findUnique({
+      where: { id: rackId },
+      include: {
+        room: {
+          include: {
+            warehouse: true
+          }
+        }
+      }
+    });
+
+    if (!rack) {
+      const error: AppError = new Error('Rack not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.RACK_NOT_FOUND;
+      throw error;
+    }
+
+    return prisma.level.findMany({
+      where: { rackId },
+      include: {
+        rack: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            roomId: true,
+            room: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                warehouseId: true
+              }
+            }
+          }
+        },
+        _count: {
+          select: {
+            locations: true
+          }
+        }
+      },
+      orderBy: { code: 'asc' }
+    });
+  }
+
+  static async createLevel(rackId: string, name: string, code: string) {
+    const rack = await prisma.rack.findUnique({
+      where: { id: rackId }
+    });
+
+    if (!rack) {
+      const error: AppError = new Error('Rack not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.RACK_NOT_FOUND;
+      throw error;
+    }
+
+    const upperCode = code.trim().toUpperCase();
+    const existing = await prisma.level.findFirst({
+      where: { rackId, code: upperCode }
+    });
+
+    if (existing) {
+      const error: AppError = new Error(`Level code '${upperCode}' already exists for this rack`);
+      error.statusCode = 400;
+      error.code = ErrorCode.DUPLICATE_CODE;
+      throw error;
+    }
+
+    return prisma.level.create({
+      data: {
+        rackId,
+        name: name.trim(),
+        code: upperCode
+      },
+      include: {
+        rack: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        }
+      }
+    });
+  }
+
+  static async deleteLevel(rackId: string, levelId: string) {
+    const level = await prisma.level.findFirst({
+      where: { id: levelId, rackId },
+      include: {
+        locations: {
+          where: { isOccupied: true }
+        }
+      }
+    });
+
+    if (!level) {
+      const error: AppError = new Error('Level not found');
+      error.statusCode = 404;
+      error.code = ErrorCode.NOT_FOUND;
+      throw error;
+    }
+
+    if (level.locations.length > 0) {
+      const error: AppError = new Error('Cannot delete level with occupied locations');
+      error.statusCode = 400;
+      error.code = ErrorCode.VALIDATION_ERROR;
+      throw error;
+    }
+
+    await prisma.location.deleteMany({
+      where: { levelId }
+    });
+
+    return prisma.level.delete({
+      where: { id: levelId }
+    });
   }
 
   static async createRack(

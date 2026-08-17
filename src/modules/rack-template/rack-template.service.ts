@@ -460,12 +460,6 @@ export class RackTemplateService {
           });
           racksCreated += 1;
 
-          const shelf = await tx.shelf.upsert({
-            where: { rackId_code: { rackId: rack.id, code: 'S1' } },
-            create: { rackId: rack.id, name: 'Default Shelf', code: 'S1' },
-            update: {}
-          });
-
           for (let l = 1; l <= template.levelsCount; l++) {
             const levelCode = `${template.levelPrefix}-${pad(l, 2)}`;
             const level = await tx.level.upsert({
@@ -474,6 +468,13 @@ export class RackTemplateService {
               update: {}
             });
             levelsCreated += 1;
+
+            const shelfCode = `S${pad(l, 2)}`;
+            const shelf = await tx.shelf.upsert({
+              where: { rackId_code: { rackId: rack.id, code: shelfCode } },
+              create: { rackId: rack.id, name: `Shelf ${l}`, code: shelfCode },
+              update: {}
+            });
 
             for (let i = 1; i <= locCount; i++) {
               const locName = `${template.locationPrefix}${pad(i, template.locationPadding)}`;
@@ -487,7 +488,11 @@ export class RackTemplateService {
                   name: locName,
                   barcode: locBarcode
                 },
-                update: { levelId: level.id }
+                update: {
+                  shelfId: shelf.id,
+                  levelId: level.id,
+                  name: locName
+                }
               });
               locationsCreated += 1;
             }

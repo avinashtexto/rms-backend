@@ -154,4 +154,107 @@ export class RackController {
       next(error);
     }
   }
+
+  static async listLevels(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const rackId = req.params.rackId as string;
+      const rack = await RackService.getRack(rackId);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+
+      if (isWarehouseManager && req.user?.warehouseId && rack.room?.warehouseId !== req.user.warehouseId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: "You don't have access to racks in this warehouse."
+          }
+        });
+      }
+
+      if (req.user?.companyId && req.user.roleName !== 'SUPER_ADMIN') {
+        if (rack.room?.warehouse?.companyId && rack.room.warehouse.companyId !== req.user.companyId) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              code: 'FORBIDDEN',
+              message: "You don't have access to racks in this company."
+            }
+          });
+        }
+      }
+
+      const levels = await RackService.listLevels(rackId);
+      res.status(200).json({
+        success: true,
+        data: levels
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async createLevel(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const rackId = req.params.rackId as string;
+      const { name, code } = req.body ?? {};
+      if (!name || !code) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Name and code are required'
+          }
+        });
+      }
+
+      const rack = await RackService.getRack(rackId);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+
+      if (isWarehouseManager && req.user?.warehouseId && rack.room?.warehouseId !== req.user.warehouseId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: "You don't have access to modify racks in this warehouse."
+          }
+        });
+      }
+
+      const level = await RackService.createLevel(rackId, String(name), String(code));
+      res.status(201).json({
+        success: true,
+        data: level
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteLevel(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const rackId = req.params.rackId as string;
+      const levelId = req.params.levelId as string;
+
+      const rack = await RackService.getRack(rackId);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+
+      if (isWarehouseManager && req.user?.warehouseId && rack.room?.warehouseId !== req.user.warehouseId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: "You don't have access to modify racks in this warehouse."
+          }
+        });
+      }
+
+      await RackService.deleteLevel(rackId, levelId);
+      res.status(200).json({
+        success: true,
+        data: { message: 'Level deleted successfully' }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
