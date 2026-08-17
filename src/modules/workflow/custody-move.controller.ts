@@ -97,4 +97,30 @@ export class CustodyMoveController {
       next(error);
     }
   }
+
+  static async listSegregations(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const warehouseId = req.user!.warehouseId || undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 20;
+      const result = await CustodyMoveService.listSegregations(companyId, warehouseId, page, pageSize);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async listMerges(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const companyId = req.user!.companyId;
+      const warehouseId = req.user!.warehouseId || undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 20;
+      const result = await CustodyMoveService.listMerges(companyId, warehouseId, page, pageSize);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

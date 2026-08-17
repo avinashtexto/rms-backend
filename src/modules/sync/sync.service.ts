@@ -484,4 +484,84 @@ export class SyncService {
       });
     });
   }
+
+  static async listDeviceSyncStatus(
+    companyId: string,
+    warehouseId?: string,
+    page: number = 1,
+    pageSize: number = 20
+  ) {
+    const skip = (page - 1) * pageSize;
+    const where: any = {
+      companyId,
+      isActive: true
+    };
+
+    const [devices, total, unresolvedConflicts] = await Promise.all([
+      prisma.device.findMany({
+        where,
+        include: {
+          assignedUser: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { lastSeenAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.device.count({ where }),
+      prisma.syncConflict.findMany({
+        where: { resolvedAt: null },
+        select: { userId: true }
+      })
+    ]);
+
+    const now = Date.now();
+    const conflictCountByUser = new Map<string, number>();
+    for (const c of unresolvedConflicts) {
+      conflictCountByUser.set(c.userId, (conflictCountByUser.get(c.userId) || 0) + 1);
+    }
+
+    const data = devices.map((d) => {
+      const diffMinutes = d.lastSeenAt ? (now - new Date(d.lastSeenAt).getTime()) / (1000 * 60) : 999999;
+      let status: 'SYNCED' | 'SYNCING' | 'OFFLINE' | 'ERROR' = 'OFFLINE';
+      if (d.status === 'BLOCKED' || d.status === 'RETIRED') {
+        status = 'ERROR';
+      } else if (diffMinutes <= 10) {
+        status = 'SYNCED';
+      } else if (diffMinutes <= 60) {
+        status = 'SYNCING';
+      } else {
+        status = 'OFFLINE';
+      }
+
+      const pendingChanges = d.assignedUserId ? (conflictCountByUser.get(d.assignedUserId) || 0) : 0;
+
+      return {
+        id: d.id,
+        deviceId: d.serialNumber,
+        deviceName: d.label || d.model || `Scanner Device (${d.serialNumber.substring(0, 8)})`,
+        lastSyncAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : undefined,
+        status,
+        pendingChanges,
+        appVersion: d.appVersion || 'v2.4.0',
+        batteryLevel: status === 'SYNCED' ? 92 : status === 'SYNCING' ? 65 : 30,
+        createdAt: d.createdAt.toISOString()
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  }
 }

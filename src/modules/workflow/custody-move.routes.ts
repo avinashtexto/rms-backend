@@ -17,5 +17,7 @@ router.get('/transfers/assigned', requirePermission('box:view') as any, CustodyM
 router.put('/transfers/:id/complete', requirePermission('box:manage') as any, CustodyMoveController.completeTransfer as any);
 router.get('/transfers/scan/:barcode', requirePermission('box:view') as any, CustodyMoveController.scanBox as any);
 router.get('/transfers', requirePermission('box:view') as any, CustodyMoveController.listTransfers as any);
+router.get('/segregations', requirePermission('box:view') as any, CustodyMoveController.listSegregations as any);
+router.get('/merges', requirePermission('box:view') as any, CustodyMoveController.listMerges as any);
 
 export default router;

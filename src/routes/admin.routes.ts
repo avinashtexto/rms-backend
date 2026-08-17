@@ -34,11 +34,13 @@ import fileTypeRoutes from '../modules/file-type/file-type.routes';
 import vendorRoutes from '../modules/vendor/vendor.routes';
 import workOrderRoutes from '../modules/work-order/work-order.routes';
 import inventoryMovementRoutes from '../modules/inventory-movement/inventory-movement.routes';
+import syncRoutes from '../modules/sync/sync.routes';
 
 const adminRouter = Router();
 
 // Mount individual domain route groups
 adminRouter.use('/auth', authRoutes);
+adminRouter.use('/sync', syncRoutes);
 adminRouter.use('/barcode', barcodeMasterRoutes);
 adminRouter.use('/rack-templates', rackTemplateRoutes);
 adminRouter.use('/box-types', boxTypeRoutes);

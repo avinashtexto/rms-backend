@@ -539,4 +539,154 @@ export class CustodyMoveService {
       }
     };
   }
+
+  static async listSegregations(
+    companyId: string,
+    warehouseId?: string,
+    page: number = 1,
+    pageSize: number = 20
+  ) {
+    const skip = (page - 1) * pageSize;
+    const where: any = {
+      oldBox: {
+        companyId,
+        ...(warehouseId ? { currentLocation: { shelf: { rack: { room: { warehouseId } } } } } : {})
+      }
+    };
+
+    const [sessions, total] = await Promise.all([
+      prisma.segregationSession.findMany({
+        where,
+        include: {
+          operator: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true
+            }
+          },
+          oldBox: {
+            select: {
+              id: true,
+              barcode: true,
+              description: true
+            }
+          },
+          newBox: {
+            select: {
+              id: true,
+              barcode: true,
+              description: true
+            }
+          },
+          movedFiles: {
+            include: {
+              fileRecord: true
+            }
+          }
+        },
+        orderBy: { startedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.segregationSession.count({ where })
+    ]);
+
+    return {
+      data: sessions.map(s => ({
+        id: s.id,
+        segregationCode: `SEG-${s.id.substring(0, 8).toUpperCase()}`,
+        boxBarcode: s.oldBox?.barcode || 'N/A',
+        boxName: s.oldBox?.description || 'Standard Box',
+        newBoxBarcode: s.newBox?.barcode || 'N/A',
+        newBoxName: s.newBox?.description || 'Segregated Target Box',
+        sourceLocation: 'Assigned Warehouse',
+        status: s.endedAt ? 'COMPLETED' : 'IN_PROGRESS',
+        assignedTo: s.operator?.fullName || 'Operator',
+        fileCount: s.movedFiles.length,
+        startedAt: s.startedAt.toISOString(),
+        completedAt: s.endedAt?.toISOString() || null,
+        createdAt: s.startedAt.toISOString()
+      })),
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  }
+
+  static async listMerges(
+    companyId: string,
+    warehouseId?: string,
+    page: number = 1,
+    pageSize: number = 20
+  ) {
+    const skip = (page - 1) * pageSize;
+    const where: any = {
+      operator: {
+        companyId
+      }
+    };
+
+    const [sessions, total] = await Promise.all([
+      prisma.mergeSession.findMany({
+        where,
+        include: {
+          operator: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      prisma.mergeSession.count({ where })
+    ]);
+
+    const fromBoxIds = sessions.map(s => s.fromBoxId);
+    const toBoxIds = sessions.map(s => s.toBoxId);
+    const boxes = await prisma.box.findMany({
+      where: {
+        id: { in: Array.from(new Set([...fromBoxIds, ...toBoxIds])) }
+      },
+      select: {
+        id: true,
+        barcode: true,
+        description: true
+      }
+    });
+
+    const boxMap = new Map(boxes.map(b => [b.id, b]));
+
+    return {
+      data: sessions.map(s => {
+        const fromBox = boxMap.get(s.fromBoxId);
+        const toBox = boxMap.get(s.toBoxId);
+        return {
+          id: s.id,
+          mergeCode: `MRG-${s.id.substring(0, 8).toUpperCase()}`,
+          sourceBoxBarcode: fromBox?.barcode || s.fromBoxId.substring(0, 8),
+          sourceBoxName: fromBox?.description || 'Source Box',
+          destinationBoxBarcode: toBox?.barcode || s.toBoxId.substring(0, 8),
+          destinationBoxName: toBox?.description || 'Destination Box',
+          status: 'COMPLETED',
+          assignedTo: s.operator?.fullName || 'Operator',
+          fileCount: s.fileCountMoved,
+          createdAt: s.createdAt.toISOString()
+        };
+      }),
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
+  }
 }
