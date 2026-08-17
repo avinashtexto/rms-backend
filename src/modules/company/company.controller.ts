@@ -35,7 +35,7 @@ export class CompanyController {
   static async createCompany(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = createCompanySchema.parse(req.body);
-      const company = await CompanyService.createCompany(data.name, data.code);
+      const company = await CompanyService.createCompany(data.name, data.code, data.isActive, data.admin);
       res.status(201).json({
         success: true,
         data: company

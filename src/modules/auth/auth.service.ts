@@ -108,8 +108,11 @@ export class AuthService {
     const permissions = await getPermissionsForRole(user.roleId);
 
     const warehouses = await getAccessibleWarehouses(user, session.companyId, session.branchId);
-    const warehouseRecord = warehouses.find((w) => w.id === session.warehouseId);
-    if (!warehouseRecord) {
+    const warehouseRecord = session.warehouseId ? warehouses.find((w) => w.id === session.warehouseId) : null;
+    const isEnterpriseAdmin =
+      user.role.name === RoleName.SUPER_ADMIN || user.role.name === RoleName.COMPANY_ADMIN;
+
+    if (!warehouseRecord && !isEnterpriseAdmin) {
       const error: AppError = new Error('Active warehouse not found in session');
       error.statusCode = 403;
       error.code = ErrorCode.FORBIDDEN;
@@ -119,7 +122,7 @@ export class AuthService {
     let branchRecord = null;
     if (session.branchId) {
       branchRecord = await assertActiveBranch(session.branchId, session.companyId);
-    } else if (warehouseRecord.site?.branch) {
+    } else if (warehouseRecord?.site?.branch) {
       branchRecord = warehouseRecord.site.branch;
       session = { ...session, branchId: branchRecord.id };
     }
@@ -176,6 +179,8 @@ export class AuthService {
         fullName: user.fullName,
         role: user.role.name,
         roleId: user.roleId,
+        companyId: session.companyId,
+        warehouseId: warehouseRecord ? warehouseRecord.id : null,
         permissions,
         warehouses: warehousesList
       },
@@ -186,10 +191,10 @@ export class AuthService {
       },
       company: mapCompanyRef(company),
       branch: branchRecord ? mapBranchRef(branchRecord) : null,
-      warehouse: mapWarehouseRef(warehouseRecord),
+      warehouse: warehouseRecord ? mapWarehouseRef(warehouseRecord) : null,
       currentCompany: mapCompanyRef(company),
       currentBranch: branchRecord ? mapBranchRef(branchRecord) : null,
-      currentWarehouse: mapWarehouseRef(warehouseRecord),
+      currentWarehouse: warehouseRecord ? mapWarehouseRef(warehouseRecord) : null,
       permissions,
       availableCompanies: companiesList,
       availableBranches: branchesList,

@@ -6,8 +6,15 @@ export const listCompaniesQuerySchema = z.object({
 });
 
 export const createCompanySchema = z.object({
-  name: z.string().min(1),
-  code: z.string().min(2).max(10).toUpperCase()
+  name: z.string().min(1, 'Company name is required'),
+  code: z.string().min(2, 'Company code must be at least 2 characters').max(10, 'Company code must be at most 10 characters').toUpperCase(),
+  isActive: z.boolean().default(true).optional(),
+  admin: z.object({
+    fullName: z.string().min(1, 'Admin full name is required'),
+    email: z.string().email('Valid admin email is required'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    phone: z.string().optional()
+  }).optional()
 });
 
 export const updateCompanySchema = z.object({

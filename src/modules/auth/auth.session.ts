@@ -209,12 +209,30 @@ export async function resolveSessionContext(
 
   await assertActiveCompany(companyId);
 
+  const isEnterpriseAdmin =
+    user.role.name === RoleName.SUPER_ADMIN || user.role.name === RoleName.COMPANY_ADMIN;
+
   const warehouses = await getAccessibleWarehouses(user, companyId, options.branchId);
+
   if (warehouses.length === 0) {
-    const error: AppError = new Error('No warehouse access assigned for this scope');
-    error.statusCode = 403;
-    error.code = ErrorCode.FORBIDDEN;
-    throw error;
+    if (!isEnterpriseAdmin) {
+      const hasAssignedWh = user.warehouseAssignments && user.warehouseAssignments.length > 0;
+      const error: AppError = new Error(
+        hasAssignedWh
+          ? 'Assigned warehouse is inactive or deactivated'
+          : 'No warehouse access assigned for this user'
+      );
+      error.statusCode = 403;
+      error.code = ErrorCode.FORBIDDEN;
+      throw error;
+    }
+
+    const branches = await getAccessibleBranches(user, companyId);
+    return {
+      companyId,
+      branchId: branches[0]?.id ?? null,
+      warehouseId: null
+    };
   }
 
   let warehouse =
@@ -223,13 +241,16 @@ export async function resolveSessionContext(
       : warehouses[0];
 
   if (!warehouse) {
-    const error: AppError = new Error('Invalid warehouse for current branch');
-    error.statusCode = 403;
-    error.code = ErrorCode.FORBIDDEN;
-    throw error;
+    if (!isEnterpriseAdmin) {
+      const error: AppError = new Error('Invalid warehouse for current branch');
+      error.statusCode = 403;
+      error.code = ErrorCode.FORBIDDEN;
+      throw error;
+    }
+    warehouse = warehouses[0];
   }
 
-  let branchId = options.branchId ?? warehouse.site?.branchId ?? null;
+  let branchId = options.branchId ?? warehouse?.site?.branchId ?? null;
 
   if (branchId) {
     await assertActiveBranch(branchId, companyId);
@@ -241,7 +262,7 @@ export async function resolveSessionContext(
   return {
     companyId,
     branchId,
-    warehouseId: warehouse.id
+    warehouseId: warehouse ? warehouse.id : null
   };
 }
 

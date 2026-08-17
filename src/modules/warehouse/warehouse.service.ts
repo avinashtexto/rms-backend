@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+import { RoleName, UserStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
@@ -76,7 +78,13 @@ export class WarehouseService {
     country?: string,
     zipCode?: number,
     phone?: string,
-    isActive?: boolean
+    isActive?: boolean,
+    admin?: {
+      fullName: string;
+      email: string;
+      password: string;
+      phone?: string;
+    }
   ) {
     // Multi-tenant check: verify site belongs to the tenant company (via branch relation)
     const site = await prisma.site.findFirst({
@@ -95,23 +103,38 @@ export class WarehouseService {
       throw error;
     }
 
+    const normalizedCode = code.trim().toUpperCase();
+
     // Check unique constraint: [siteId, code]
     const existing = await prisma.warehouse.findFirst({
-      where: { siteId, code }
+      where: { siteId, code: normalizedCode }
     });
 
     if (existing) {
-      const error: AppError = new Error(`Warehouse with code '${code}' already exists under this Site`);
+      const error: AppError = new Error(`Warehouse with code '${normalizedCode}' already exists under this Site`);
       error.statusCode = 400;
       error.code = ErrorCode.DUPLICATE_CODE;
       throw error;
     }
 
+    if (admin) {
+      const normalizedEmail = admin.email.trim().toLowerCase();
+      const existingUser = await prisma.user.findUnique({
+        where: { email: normalizedEmail }
+      });
+      if (existingUser) {
+        const error: AppError = new Error(`Email '${admin.email}' is already registered.`);
+        error.statusCode = 400;
+        error.code = ErrorCode.DUPLICATE_EMAIL;
+        throw error;
+      }
+    }
+
     const data: any = {
       companyId,
       siteId,
-      name,
-      code,
+      name: name.trim(),
+      code: normalizedCode,
       isActive: isActive !== undefined ? isActive : true
     };
 
@@ -122,8 +145,75 @@ export class WarehouseService {
     if (zipCode !== undefined) data.zipCode = zipCode;
     if (phone !== undefined) data.phone = phone;
 
-    return prisma.warehouse.create({
-      data
+    return prisma.$transaction(async (tx) => {
+      // 1. Create warehouse
+      const warehouse = await tx.warehouse.create({
+        data,
+        include: {
+          site: {
+            include: {
+              branch: true
+            }
+          }
+        }
+      });
+
+      let adminUser = null;
+      if (admin) {
+        // 2. Find WAREHOUSE_MANAGER role
+        const whManagerRole = await tx.role.findFirst({
+          where: { name: RoleName.WAREHOUSE_MANAGER }
+        });
+
+        if (!whManagerRole) {
+          const error: AppError = new Error('WAREHOUSE_MANAGER role not found in database');
+          error.statusCode = 500;
+          throw error;
+        }
+
+        // 3. Hash password
+        const passwordHash = await bcrypt.hash(admin.password, 10);
+        const employeeCode = `WHM-${normalizedCode}-${Date.now().toString().slice(-4)}`;
+
+        // 4. Create warehouse admin user
+        const user = await tx.user.create({
+          data: {
+            companyId,
+            roleId: whManagerRole.id,
+            employeeCode,
+            fullName: admin.fullName.trim(),
+            email: admin.email.trim().toLowerCase(),
+            phone: admin.phone?.trim() || null,
+            passwordHash,
+            status: UserStatus.ACTIVE
+          },
+          include: { role: true }
+        });
+
+        // 5. Assign to newly created warehouse
+        await tx.userWarehouseAssignment.create({
+          data: {
+            userId: user.id,
+            warehouseId: warehouse.id
+          }
+        });
+
+        adminUser = {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          employeeCode: user.employeeCode,
+          role: user.role.name,
+          status: user.status,
+          warehouseId: warehouse.id
+        };
+      }
+
+      return {
+        ...warehouse,
+        admin: adminUser
+      };
     });
   }
 

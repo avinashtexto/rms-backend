@@ -15,7 +15,13 @@ export const createWarehouseSchema = z.object({
   country: z.preprocess((val) => val === '' ? undefined : val, z.string().max(100).optional()),
   zipCode: z.preprocess((val) => val === '' || val === null || val === undefined ? undefined : val, z.coerce.number().int().positive().optional()),
   phone: z.preprocess((val) => val === '' || val === null || val === undefined ? undefined : val, z.string().regex(/^\+?[0-9]{7,15}$/, 'Phone must be 7-15 digits with optional leading +').optional()),
-  isActive: z.boolean().default(true)
+  isActive: z.boolean().default(true),
+  admin: z.object({
+    fullName: z.string().min(1, 'Admin full name is required'),
+    email: z.string().email('Valid admin email is required'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    phone: z.string().optional()
+  }).optional()
 });
 
 export const updateWarehouseSchema = z.object({

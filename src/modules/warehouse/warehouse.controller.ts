@@ -62,7 +62,8 @@ export class WarehouseController {
         data.country,
         data.zipCode,
         data.phone,
-        data.isActive
+        data.isActive,
+        data.admin
       );
       res.status(201).json({
         success: true,
