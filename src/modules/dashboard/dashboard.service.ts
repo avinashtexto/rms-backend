@@ -59,13 +59,13 @@ export class DashboardService {
         }).catch(() => 0),
         prisma.refileEvent.count({
           where: {
-            createdAt: { gte: today },
-            location: locationWhere
+            scannedAt: { gte: today },
+            scannedLocation: locationWhere
           }
         }).catch(() => 0),
         prisma.segregationSession.count({
           where: {
-            status: 'PENDING' as any
+            endedAt: null
           }
         }).catch(() => 0)
       ]);

@@ -2,15 +2,16 @@ import { Response, NextFunction } from 'express';
 import { RackService } from './rack.service';
 import { createRackSchema, updateRackSchema } from './rack.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
+import { prisma } from '../../lib/prisma';
 
 export class RackController {
   static async listRacks(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
       const roomId = req.query.roomId as string | undefined;
-      const warehouseId = isWarehouseManager
+      const warehouseId = (isWarehouseManager
         ? req.user?.warehouseId
-        : (req.query.warehouseId as string | undefined);
+        : (req.query.warehouseId as string | undefined)) ?? undefined;
       const racks = await RackService.listRacks({ roomId, warehouseId });
       res.status(200).json({
         success: true,

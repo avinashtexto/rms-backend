@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { RackTemplateController } from './rack-template.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { enforceWarehouseScope } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(enforceWarehouseScope as any);
 
 router.get('/', requirePermission('rack-template:view') as any, RackTemplateController.list as any);
 router.post('/', requirePermission('rack-template:create') as any, RackTemplateController.create as any);

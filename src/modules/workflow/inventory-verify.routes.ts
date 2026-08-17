@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { InventoryVerifyController } from './inventory-verify.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { enforceWarehouseScope } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(enforceWarehouseScope as any);
 
 router.post('/sessions', requirePermission('workflow:execute') as any, InventoryVerifyController.startSession as any);
 router.post('/sessions/:sessionId/scans', requirePermission('workflow:execute') as any, InventoryVerifyController.submitScan as any);

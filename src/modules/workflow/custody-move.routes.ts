@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { CustodyMoveController } from './custody-move.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { enforceWarehouseScope } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(enforceWarehouseScope as any);
 
 router.post('/segregate', requirePermission('box:manage') as any, CustodyMoveController.segregateBox as any);
 router.post('/merge', requirePermission('box:manage') as any, CustodyMoveController.mergeBoxes as any);

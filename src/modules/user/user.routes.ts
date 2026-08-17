@@ -7,14 +7,16 @@ import { blockForWarehouseManager } from '../../middleware/warehouse-scope.middl
 const router = Router();
 
 router.use(requireAuth as any);
-router.use(blockForWarehouseManager as any);
 
-router.get('/', requirePermission('user:view') as any, UserController.listUsers as any);
-router.get('/:id', requirePermission('user:view') as any, UserController.getUserById as any);
-router.post('/', requirePermission('user:manage') as any, UserController.createUser as any);
-router.put('/:id', requirePermission('user:manage') as any, UserController.updateUser as any);
-router.patch('/:id/deactivate', requirePermission('user:manage') as any, UserController.deactivateUser as any);
-router.delete('/:id', requirePermission('user:manage') as any, UserController.deleteUser as any);
-router.post('/:id/reset-password', requirePermission('user:manage') as any, UserController.resetPassword as any);
+// Read-only user listing for assignments & work orders
+router.get('/', UserController.listUsers as any);
+router.get('/:id', UserController.getUserById as any);
+
+// Administrative mutations strictly blocked for Warehouse Manager
+router.post('/', blockForWarehouseManager as any, requirePermission('user:manage') as any, UserController.createUser as any);
+router.put('/:id', blockForWarehouseManager as any, requirePermission('user:manage') as any, UserController.updateUser as any);
+router.patch('/:id/deactivate', blockForWarehouseManager as any, requirePermission('user:manage') as any, UserController.deactivateUser as any);
+router.delete('/:id', blockForWarehouseManager as any, requirePermission('user:manage') as any, UserController.deleteUser as any);
+router.post('/:id/reset-password', blockForWarehouseManager as any, requirePermission('user:manage') as any, UserController.resetPassword as any);
 
 export default router;

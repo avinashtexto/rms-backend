@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { LocationController } from './location.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { enforceWarehouseScope } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(enforceWarehouseScope as any);
 
 router.get('/', requirePermission('location:view') as any, LocationController.listLocations as any);
 router.get('/:locationId', requirePermission('location:view') as any, LocationController.getLocation as any);

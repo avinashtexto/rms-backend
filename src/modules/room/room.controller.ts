@@ -7,9 +7,9 @@ export class RoomController {
   static async listRooms(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
-      const warehouseId = isWarehouseManager
+      const warehouseId = (isWarehouseManager
         ? req.user?.warehouseId
-        : (req.query.warehouseId as string | undefined);
+        : (req.query.warehouseId as string | undefined)) ?? undefined;
       const rooms = await RoomService.listRooms(warehouseId);
       res.status(200).json({
         success: true,

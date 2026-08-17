@@ -6,8 +6,10 @@ import { AuthenticatedRequest } from '../auth/auth.types';
 export class LocationController {
   static async listLocations(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
       const shelfId = req.query.shelfId as string | undefined;
-      const locations = await LocationService.listLocations(shelfId);
+      const warehouseId = (isWarehouseManager ? req.user?.warehouseId : (req.query.warehouseId as string | undefined)) ?? undefined;
+      const locations = await LocationService.listLocations(shelfId, warehouseId);
       res.status(200).json({
         success: true,
         data: locations
