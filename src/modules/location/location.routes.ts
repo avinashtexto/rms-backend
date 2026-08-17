@@ -10,6 +10,9 @@ router.use(requireAuth as any);
 router.use(enforceWarehouseScope as any);
 
 router.get('/', requirePermission('location:view') as any, LocationController.listLocations as any);
+router.post('/bulk-generate', requirePermission('location:manage') as any, LocationController.bulkGenerate as any);
+router.post('/bulk-action', requirePermission('location:manage') as any, LocationController.bulkAction as any);
+router.post('/bulk-import', requirePermission('location:manage') as any, LocationController.bulkImport as any);
 router.get('/:locationId', requirePermission('location:view') as any, LocationController.getLocation as any);
 router.post('/', requirePermission('location:manage') as any, LocationController.createLocation as any);
 router.put('/:locationId', requirePermission('location:manage') as any, LocationController.updateLocation as any);
