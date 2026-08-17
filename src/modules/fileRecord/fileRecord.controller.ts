@@ -71,4 +71,70 @@ export class FileRecordController {
       next(error);
     }
   }
+
+  static async bulkGenerate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { boxId, prefix, startingNumber, quantity, padding, titlePrefix } = req.body ?? {};
+      if (!boxId) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'boxId is required' }
+        });
+      }
+
+      const result = await FileRecordService.bulkGenerateFileRecords(
+        req.user!.companyId,
+        String(boxId),
+        prefix ? String(prefix) : 'FILE',
+        Number(startingNumber) || 1,
+        Number(quantity) || 20,
+        Number(padding) || 4,
+        titlePrefix ? String(titlePrefix) : undefined
+      );
+
+      res.status(201).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async bulkAction(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { ids, action } = req.body ?? {};
+      if (!Array.isArray(ids) || !action) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'ids array and action are required' }
+        });
+      }
+
+      const result = await FileRecordService.bulkActionFileRecords(req.user!.companyId, ids, action);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async bulkImport(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { boxId, rows } = req.body ?? {};
+      if (!boxId || !Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'boxId and non-empty rows array are required' }
+        });
+      }
+
+      const result = await FileRecordService.bulkImportFileRecords(req.user!.companyId, String(boxId), rows);
+      res.status(201).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
