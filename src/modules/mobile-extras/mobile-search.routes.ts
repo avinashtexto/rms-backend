@@ -133,9 +133,9 @@ router.get('/search/barcode', async (req: AuthenticatedRequest, res: Response, n
 router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const companyId = req.user!.companyId;
-    const boxId = req.params.id;
+    const boxId = String(req.params.id);
 
-    const box = await prisma.box.findFirst({
+    const box: any = await prisma.box.findFirst({
       where: {
         companyId,
         OR: [{ id: boxId }, { barcode: boxId }]
@@ -157,9 +157,9 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
       name: box.description ?? null,
       location: box.currentLocation?.name ?? 'Unassigned',
       status: box.status,
-      fileCount: box.fileRecords.length,
-      lastActivity: box.updatedAt.toISOString(),
-      contents: box.fileRecords.map(f => ({
+      fileCount: box.fileRecords?.length ?? 0,
+      lastActivity: box.updatedAt ? new Date(box.updatedAt).toISOString() : new Date().toISOString(),
+      contents: (box.fileRecords ?? []).map((f: any) => ({
         id: f.id,
         barcode: f.barcode,
         title: f.title ?? f.barcode,
