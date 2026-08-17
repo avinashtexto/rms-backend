@@ -175,4 +175,90 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
   }
 });
 
+// GET /search/files/:id -> FileDetailDto
+router.get('/search/files/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const companyId = req.user!.companyId;
+    const fileId = String(req.params.id);
+
+    const file: any = await prisma.fileRecord.findFirst({
+      where: {
+        companyId,
+        OR: [{ id: fileId }, { barcode: fileId }]
+      },
+      include: {
+        box: {
+          include: {
+            client: true,
+            currentLocation: {
+              include: {
+                shelf: {
+                  include: {
+                    rack: {
+                      include: {
+                        room: {
+                          include: {
+                            warehouse: true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        fileType: true,
+        refileEvents: {
+          take: 10,
+          orderBy: { scannedAt: 'desc' }
+        }
+      }
+    });
+
+    if (!file) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'File not found' } });
+    }
+
+    const loc = file.box?.currentLocation;
+    const locationChain: string[] = [];
+    if (loc?.shelf?.rack?.room?.warehouse?.name) locationChain.push(loc.shelf.rack.room.warehouse.name);
+    if (loc?.shelf?.rack?.room?.name) locationChain.push(loc.shelf.rack.room.name);
+    if (loc?.shelf?.rack?.code) locationChain.push(`Rack ${loc.shelf.rack.code}`);
+    if (loc?.name) locationChain.push(loc.name);
+
+    const movementHistory = (file.refileEvents ?? []).map((ev: any) => ({
+      id: ev.id,
+      eventType: 'REFILED',
+      fromLocation: null,
+      toLocation: null,
+      timestamp: ev.scannedAt ? ev.scannedAt.toISOString() : new Date().toISOString(),
+      performedBy: ev.operatorId ?? 'Operator',
+      notes: ev.action ?? null
+    }));
+
+    const fileDetail = {
+      id: file.id,
+      barcode: file.barcode,
+      title: file.title ?? file.barcode,
+      parentBox: {
+        id: file.box?.id ?? '',
+        barcode: file.box?.barcode ?? 'Unassigned',
+        name: file.box?.description ?? null,
+        location: file.box?.currentLocation?.name ?? 'Unassigned'
+      },
+      locationChain: locationChain.length > 0 ? locationChain : ['Warehouse Location'],
+      status: file.status,
+      movementHistory,
+      createdAt: file.createdAt.toISOString(),
+      updatedAt: file.updatedAt ? file.updatedAt.toISOString() : null
+    };
+
+    res.status(200).json({ success: true, data: fileDetail });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

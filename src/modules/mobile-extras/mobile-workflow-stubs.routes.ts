@@ -73,7 +73,36 @@ router.post('/refiles/start', async (req: AuthenticatedRequest, res: Response, n
 
 router.put('/refiles/:id/complete', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: { id: req.params.id } });
+    const companyId = req.user!.companyId;
+    const userId = req.user!.id;
+    const { fileBarcode, newLocation, reason } = req.body ?? {};
+
+    if (fileBarcode) {
+      const file = await prisma.fileRecord.findFirst({
+        where: { companyId, barcode: fileBarcode },
+        include: { box: true }
+      });
+
+      if (file) {
+        const boxId = file.boxId || file.id;
+        const locId = file.box?.currentLocationId || file.id;
+        await prisma.refileEvent.create({
+          data: {
+            operatorId: userId,
+            fileRecordId: file.id,
+            expectedBoxId: boxId,
+            expectedLocationId: locId,
+            scannedLocationId: locId,
+            scannedBoxId: boxId,
+            action: 'REFILE_SUCCESS',
+            clientEventId: randomUUID(),
+            scannedAt: new Date()
+          }
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: { id: req.params.id, status: 'COMPLETED' } });
   } catch (error) {
     next(error);
   }
@@ -81,7 +110,6 @@ router.put('/refiles/:id/complete', async (req: AuthenticatedRequest, res: Respo
 
 router.get('/refiles/scan/:barcode', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    // No in-flight refile is tracked server-side; the app drives scan state locally.
     res.status(200).json({ success: true, data: null });
   } catch (error) {
     next(error);
@@ -140,7 +168,38 @@ router.post('/merges/start', async (req: AuthenticatedRequest, res: Response, ne
 
 router.put('/merges/:id/complete', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: { id: req.params.id } });
+    const companyId = req.user!.companyId;
+    const userId = req.user!.id;
+    const { sourceBoxBarcode, destinationBoxBarcode } = req.body ?? {};
+
+    if (sourceBoxBarcode && destinationBoxBarcode) {
+      const [sourceBox, destBox] = await Promise.all([
+        prisma.box.findFirst({ where: { companyId, barcode: sourceBoxBarcode } }),
+        prisma.box.findFirst({ where: { companyId, barcode: destinationBoxBarcode } })
+      ]);
+
+      if (sourceBox && destBox) {
+        const fileCountMoved = await prisma.fileRecord.count({ where: { companyId, boxId: sourceBox.id } });
+
+        await prisma.$transaction(async (tx) => {
+          await tx.fileRecord.updateMany({
+            where: { companyId, boxId: sourceBox.id },
+            data: { boxId: destBox.id }
+          });
+
+          await tx.mergeSession.create({
+            data: {
+              operatorId: userId,
+              fromBoxId: sourceBox.id,
+              toBoxId: destBox.id,
+              fileCountMoved
+            }
+          });
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: { id: req.params.id, status: 'COMPLETED' } });
   } catch (error) {
     next(error);
   }
@@ -225,7 +284,52 @@ router.post('/segregations/start', async (req: AuthenticatedRequest, res: Respon
 
 router.put('/segregations/:id/complete', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: { id: req.params.id } });
+    const companyId = req.user!.companyId;
+    const userId = req.user!.id;
+    const { boxBarcode, targetBoxBarcode, fileBarcodes } = req.body ?? {};
+
+    if (boxBarcode) {
+      const box = await prisma.box.findFirst({ where: { companyId, barcode: boxBarcode } });
+      if (box) {
+        let targetBox = null;
+        if (targetBoxBarcode) {
+          targetBox = await prisma.box.findFirst({ where: { companyId, barcode: targetBoxBarcode } });
+        }
+
+        await prisma.$transaction(async (tx) => {
+          const session = await tx.segregationSession.create({
+            data: {
+              operatorId: userId,
+              oldBoxId: box.id,
+              newBoxId: targetBox ? targetBox.id : box.id
+            }
+          });
+
+          if (targetBox && Array.isArray(fileBarcodes) && fileBarcodes.length > 0) {
+            const files = await tx.fileRecord.findMany({
+              where: { companyId, barcode: { in: fileBarcodes } }
+            });
+
+            for (const file of files) {
+              await tx.fileRecord.update({
+                where: { id: file.id },
+                data: { boxId: targetBox.id }
+              });
+
+              await tx.segregationFileMove.create({
+                data: {
+                  sessionId: session.id,
+                  fileRecordId: file.id,
+                  clientEventId: randomUUID()
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: { id: req.params.id, status: 'COMPLETED' } });
   } catch (error) {
     next(error);
   }
