@@ -11,5 +11,6 @@ router.get('/metrics', requirePermission('dashboard:view') as any, DashboardCont
 router.get('/scan-activity', requirePermission('dashboard:view') as any, DashboardController.getScanActivity as any);
 router.get('/recent-activity', requirePermission('dashboard:view') as any, DashboardController.getRecentActivity as any);
 router.get('/', requirePermission('dashboard:view') as any, DashboardController.getDashboardData as any);
+router.get('/super-admin-summary', requirePermission('dashboard:view') as any, DashboardController.getSuperAdminSummary as any);
 
 export default router;

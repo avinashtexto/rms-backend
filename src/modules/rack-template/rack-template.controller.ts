@@ -1,51 +1,162 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { RackTemplateService } from './rack-template.service';
+import {
+  applyRackTemplateSchema,
+  cloneRackTemplateSchema,
+  createRackTemplateSchema,
+  listRackTemplateQuerySchema,
+  updateRackTemplateSchema
+} from './rack-template.validation';
+import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class RackTemplateController {
-  static async list(req: any, res: Response, next: NextFunction) {
+  static async list(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const companyId = req.user.companyId;
-      const data = await RackTemplateService.listTemplates(companyId);
+      const query = listRackTemplateQuerySchema.parse(req.query);
+      const data = await RackTemplateService.listTemplates(req.user!.companyId, query);
+      res.json({ success: true, ...data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await RackTemplateService.getTemplate(req.params.id as string, req.user!.companyId);
       res.json({ success: true, data });
     } catch (err) {
       next(err);
     }
   }
 
-  static async create(req: any, res: Response, next: NextFunction) {
+  static async create(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const companyId = req.user.companyId;
-      const data = await RackTemplateService.createTemplate(companyId, req.body);
+      const body = createRackTemplateSchema.parse(req.body);
+      const data = await RackTemplateService.createTemplate(req.user!.companyId, req.user!.id, body);
       res.status(201).json({ success: true, data });
     } catch (err) {
       next(err);
     }
   }
 
-  static async update(req: Request, res: Response, next: NextFunction) {
+  static async update(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
-      const data = await RackTemplateService.updateTemplate(id as string, req.body);
+      const body = updateRackTemplateSchema.parse(req.body);
+      const data = await RackTemplateService.updateTemplate(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id,
+        body
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
     }
   }
 
-  static async delete(req: Request, res: Response, next: NextFunction) {
+  static async remove(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
-      await RackTemplateService.deleteTemplate(id as string);
+      await RackTemplateService.softDeleteTemplate(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id
+      );
       res.json({ success: true, message: 'Template deleted' });
     } catch (err) {
       next(err);
     }
   }
 
-  static async apply(req: Request, res: Response, next: NextFunction) {
+  static async activate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await RackTemplateService.setStatus(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id,
+        'ACTIVE'
+      );
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async deactivate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await RackTemplateService.setStatus(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id,
+        'INACTIVE'
+      );
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async clone(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const body = cloneRackTemplateSchema.parse(req.body);
+      const data = await RackTemplateService.cloneTemplate(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id,
+        body
+      );
+      res.status(201).json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async previewById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await RackTemplateService.previewTemplateById(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id
+      );
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async previewDraft(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const body = createRackTemplateSchema.parse(req.body);
+      const data = RackTemplateService.previewFromInput(body);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async apply(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const body = applyRackTemplateSchema.parse(req.body);
+      const data = await RackTemplateService.applyTemplate(
+        req.params.id as string,
+        req.user!.companyId,
+        req.user!.id,
+        body
+      );
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async applyLegacy(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { templateId, roomId } = req.body;
-      const data = await RackTemplateService.applyTemplate(templateId, roomId);
+      const data = await RackTemplateService.applyTemplateLegacy(
+        templateId,
+        roomId,
+        req.user!.id,
+        req.user!.companyId
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);

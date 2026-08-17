@@ -137,6 +137,29 @@ enum WorkflowAction {
   AUTH_SWITCH_BRANCH
   AUTH_SWITCH_WAREHOUSE
   AUTH_SESSION_EXPIRED
+  RACK_TEMPLATE_CREATED
+  RACK_TEMPLATE_UPDATED
+  RACK_TEMPLATE_DELETED
+  RACK_TEMPLATE_CLONED
+  RACK_TEMPLATE_APPLIED
+  RACK_TEMPLATE_PREVIEWED
+}
+
+enum WarehouseTemplateType {
+  SMALL
+  MEDIUM
+  LARGE
+  CUSTOM
+}
+
+enum LocationNamingMode {
+  AUTO
+  MANUAL
+}
+
+enum MasterRecordStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum SyncStatus {
@@ -297,6 +320,7 @@ model Room {
   code        String
   barcode     String?  @unique
   description String?
+  location    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -311,14 +335,16 @@ model Room {
 }
 
 model Rack {
-  id        String   @id @default(uuid())
-  roomId    String
-  name      String
-  code      String
-  barcode   String?  @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  roomId      String
+  name        String
+  code        String
+  barcode     String?  @unique
+  description String?
+  floor       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   rowId     String?
   row       Row?    @relation(fields: [rowId], references: [id])
@@ -987,13 +1013,20 @@ model BarcodeHistory {
 // ============================================================
 
 model Row {
-  id        String   @id @default(uuid())
-  roomId    String
-  name      String
-  code      String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  roomId              String
+  name                String
+  code                String
+  column              String?
+  rowPrefix           String?
+  columnsInCell       Int?
+  capacityOfCell      Int?
+  floor               String?
+  isTemporaryLocation Boolean  @default(false)
+  description         String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   room  Room   @relation(fields: [roomId], references: [id])
   racks Rack[]
@@ -1019,18 +1052,30 @@ model Level {
 }
 
 model RackTemplate {
-  id          String   @id @default(uuid())
-  companyId   String
-  name        String
-  code        String
-  description String?
-  rowsCount   Int      @default(1)
-  racksCount  Int      @default(1)
-  levelsCount Int      @default(1)
-  locRows     Int      @default(3)
-  locCols     Int      @default(3)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String               @id @default(uuid())
+  companyId        String
+  name             String
+  code             String
+  description      String?
+  warehouseType    WarehouseTemplateType @default(CUSTOM)
+  rowsCount        Int                  @default(1)
+  racksCount       Int                  @default(1)
+  levelsCount      Int                  @default(1)
+  locRows          Int                  @default(1)
+  locCols          Int                  @default(1)
+  locationPerLevel Int?
+  rowPrefix        String               @default("ROW")
+  rackPrefix       String               @default("R")
+  levelPrefix      String               @default("L")
+  locationPrefix   String               @default("LOC")
+  locationPadding  Int                  @default(3)
+  locationNaming   LocationNamingMode   @default(AUTO)
+  status           MasterRecordStatus   @default(ACTIVE)
+  createdBy        String?
+  updatedBy        String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  deletedAt        DateTime?
 
   company Company @relation(fields: [companyId], references: [id])
 

@@ -24,3 +24,12 @@ export const WAREHOUSE_MANAGER_PERMISSION_KEYS = [
   'device:view',
   'sync:manage',
 ] as const;
+
+/** Company Admin cannot manage global company/role settings */
+export const COMPANY_ADMIN_EXCLUDED_PERMISSION_KEYS = [
+  'company:manage',
+  'role:view',
+  'role:manage',
+  'permission:view',
+  'sync:manage',
+] as const;

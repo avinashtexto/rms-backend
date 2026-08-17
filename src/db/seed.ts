@@ -2,7 +2,7 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { RoleName } from '@prisma/client';
-import { WAREHOUSE_MANAGER_PERMISSION_KEYS } from '../modules/auth/auth.constants';
+import { WAREHOUSE_MANAGER_PERMISSION_KEYS, COMPANY_ADMIN_EXCLUDED_PERMISSION_KEYS } from '../modules/auth/auth.constants';
 
 async function main() {
   console.log('Seeding database with default Company, Roles, Permissions, and Admin...');
@@ -67,6 +67,11 @@ async function main() {
     { key: 'notification:view', description: 'View notifications' },
     { key: 'sync:manage', description: 'Manage offline sync conflicts' },
     { key: 'dashboard:view', description: 'View dashboard' },
+    // Warehouse Manager — admin-panel monitoring tier (read-only, warehouse-scoped)
+    { key: 'masters:read', description: 'Read-only warehouse master data for assigned warehouses' },
+    { key: 'warehouse:monitor', description: 'Warehouse dashboard and live monitoring for assigned warehouses' },
+    { key: 'warehouse:reports', description: 'Warehouse-scoped reports (read-only)' },
+    { key: 'live-feed:view', description: 'Live scan and operation feed for assigned warehouses' },
   ];
 
   const dbPermissions: any[] = [];
@@ -110,8 +115,8 @@ async function main() {
     roleMap[roleData.name] = role.id;
     console.log(`Created/Verified Role ${roleData.name}`);
 
-    // Assign all seeded permissions to SUPER_ADMIN and COMPANY_ADMIN
-    if (roleData.name === RoleName.SUPER_ADMIN || roleData.name === RoleName.COMPANY_ADMIN) {
+    // Assign all seeded permissions to SUPER_ADMIN
+    if (roleData.name === RoleName.SUPER_ADMIN) {
       for (const perm of dbPermissions) {
         await prisma.rolePermission.upsert({
           where: {
@@ -125,6 +130,42 @@ async function main() {
             roleId: role.id,
             permissionId: perm.id
           }
+        });
+      }
+    }
+
+    // Company Admin: all permissions except global company/role management
+    if (roleData.name === RoleName.COMPANY_ADMIN) {
+      const companyAdminPermissions = dbPermissions.filter(
+        (p) => !COMPANY_ADMIN_EXCLUDED_PERMISSION_KEYS.includes(
+          p.key as (typeof COMPANY_ADMIN_EXCLUDED_PERMISSION_KEYS)[number]
+        )
+      );
+      for (const perm of companyAdminPermissions) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: perm.id
+            }
+          },
+          update: {},
+          create: {
+            roleId: role.id,
+            permissionId: perm.id
+          }
+        });
+      }
+      const excludedIds = dbPermissions
+        .filter((p) =>
+          COMPANY_ADMIN_EXCLUDED_PERMISSION_KEYS.includes(
+            p.key as (typeof COMPANY_ADMIN_EXCLUDED_PERMISSION_KEYS)[number]
+          )
+        )
+        .map((p) => p.id);
+      if (excludedIds.length > 0) {
+        await prisma.rolePermission.deleteMany({
+          where: { roleId: role.id, permissionId: { in: excludedIds } }
         });
       }
     }
@@ -319,6 +360,25 @@ async function main() {
     },
   });
   console.log('Created Warehouse:', warehouse.name);
+
+  // Assign default warehouse to mobile / warehouse-manager users
+  const mobileRoleUsers = [managerUser, supervisorUser, operatorUser];
+  for (const mobileUser of mobileRoleUsers) {
+    await prisma.userWarehouseAssignment.upsert({
+      where: {
+        userId_warehouseId: {
+          userId: mobileUser.id,
+          warehouseId: warehouse.id
+        }
+      },
+      update: {},
+      create: {
+        userId: mobileUser.id,
+        warehouseId: warehouse.id
+      }
+    });
+  }
+  console.log('Assigned default warehouse to mobile role users');
 
   // 8. Create a Default Room
   const room = await prisma.room.upsert({

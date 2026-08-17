@@ -132,6 +132,10 @@ export class AuthService {
       session.branchId
     );
 
+    const companiesList = availableCompanies.map(mapCompanyRef);
+    const branchesList = availableBranches.map(mapBranchRef);
+    const warehousesListAll = availableWarehouses.map(mapWarehouseRef);
+
     const accessToken = AuthService.signAccessToken({
       userId: user.id,
       companyId: session.companyId,
@@ -171,16 +175,28 @@ export class AuthService {
         username: user.email,
         fullName: user.fullName,
         role: user.role.name,
+        roleId: user.roleId,
         permissions,
         warehouses: warehousesList
+      },
+      role: {
+        id: user.role.id,
+        name: user.role.name,
+        label: user.role.label
       },
       company: mapCompanyRef(company),
       branch: branchRecord ? mapBranchRef(branchRecord) : null,
       warehouse: mapWarehouseRef(warehouseRecord),
+      currentCompany: mapCompanyRef(company),
+      currentBranch: branchRecord ? mapBranchRef(branchRecord) : null,
+      currentWarehouse: mapWarehouseRef(warehouseRecord),
       permissions,
-      availableCompanies: availableCompanies.map(mapCompanyRef),
-      availableBranches: availableBranches.map(mapBranchRef),
-      availableWarehouses: availableWarehouses.map(mapWarehouseRef)
+      availableCompanies: companiesList,
+      availableBranches: branchesList,
+      availableWarehouses: warehousesListAll,
+      companies: companiesList,
+      branches: branchesList,
+      warehouses: warehousesListAll
     };
 
     if (!options?.skipAudit && options?.auditAction) {
@@ -415,6 +431,10 @@ export class AuthService {
       session.branchId
     );
 
+    const companiesList = availableCompanies.map(mapCompanyRef);
+    const branchesList = availableBranches.map(mapBranchRef);
+    const warehousesList = availableWarehouses.map(mapWarehouseRef);
+
     return {
       id: user.id,
       fullName: user.fullName,
@@ -425,6 +445,9 @@ export class AuthService {
       company: mapCompanyRef(company),
       branch: branchRecord ? mapBranchRef(branchRecord) : null,
       warehouse: mapWarehouseRef(warehouseRecord),
+      currentCompany: mapCompanyRef(company),
+      currentBranch: branchRecord ? mapBranchRef(branchRecord) : null,
+      currentWarehouse: mapWarehouseRef(warehouseRecord),
       permissions,
       role: {
         id: user.role.id,
@@ -440,9 +463,12 @@ export class AuthService {
         mobile: user.phone,
         role: user.role.name
       },
-      availableCompanies: availableCompanies.map(mapCompanyRef),
-      availableBranches: availableBranches.map(mapBranchRef),
-      availableWarehouses: availableWarehouses.map(mapWarehouseRef),
+      availableCompanies: companiesList,
+      availableBranches: branchesList,
+      availableWarehouses: warehousesList,
+      companies: companiesList,
+      branches: branchesList,
+      warehouses: warehousesList,
       session: {
         companyId: session.companyId,
         branchId: session.branchId,

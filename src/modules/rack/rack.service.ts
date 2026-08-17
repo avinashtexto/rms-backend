@@ -2,12 +2,30 @@ import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 
+type RackListFilters = {
+  roomId?: string;
+  warehouseId?: string;
+};
+
 export class RackService {
-  static async listRacks(roomId?: string) {
+  static async listRacks(filters?: RackListFilters) {
     return prisma.rack.findMany({
-      where: roomId ? { roomId } : undefined,
+      where: {
+        ...(filters?.roomId && { roomId: filters.roomId }),
+        ...(filters?.warehouseId && { room: { warehouseId: filters.warehouseId } })
+      },
       include: {
-        room: true
+        room: {
+          include: {
+            warehouse: true
+          }
+        },
+        _count: {
+          select: {
+            shelves: true,
+            levels: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -17,7 +35,11 @@ export class RackService {
     const rack = await prisma.rack.findUnique({
       where: { id },
       include: {
-        room: true
+        room: {
+          include: {
+            warehouse: true
+          }
+        }
       }
     });
 
@@ -31,7 +53,13 @@ export class RackService {
     return rack;
   }
 
-  static async createRack(roomId: string, name: string, code: string) {
+  static async createRack(
+    roomId: string,
+    name: string,
+    code: string,
+    description?: string,
+    floor?: string
+  ) {
     const room = await prisma.room.findUnique({
       where: { id: roomId }
     });
@@ -55,14 +83,26 @@ export class RackService {
     }
 
     return prisma.rack.create({
-      data: { roomId, name, code },
+      data: { roomId, name, code, description, floor },
       include: {
-        room: true
+        room: {
+          include: {
+            warehouse: true
+          }
+        }
       }
     });
   }
 
-  static async updateRack(id: string, name?: string, isActive?: boolean) {
+  static async updateRack(
+    id: string,
+    name?: string,
+    isActive?: boolean,
+    description?: string,
+    floor?: string,
+    roomId?: string,
+    code?: string
+  ) {
     const rack = await prisma.rack.findUnique({
       where: { id }
     });
@@ -74,14 +114,51 @@ export class RackService {
       throw error;
     }
 
+    const newRoomId = roomId !== undefined ? roomId : rack.roomId;
+    const newCode = code !== undefined ? code.toUpperCase() : rack.code;
+
+    if (newRoomId !== rack.roomId || newCode !== rack.code) {
+      const room = await prisma.room.findUnique({
+        where: { id: newRoomId }
+      });
+      if (!room) {
+        const error: AppError = new Error('Room not found');
+        error.statusCode = 404;
+        error.code = ErrorCode.ROOM_NOT_FOUND;
+        throw error;
+      }
+
+      const existing = await prisma.rack.findFirst({
+        where: {
+          roomId: newRoomId,
+          code: newCode,
+          id: { not: id }
+        }
+      });
+      if (existing) {
+        const error: AppError = new Error(`Rack code '${newCode}' is already taken for this room`);
+        error.statusCode = 400;
+        error.code = ErrorCode.DUPLICATE_CODE;
+        throw error;
+      }
+    }
+
     return prisma.rack.update({
       where: { id },
       data: {
+        roomId: newRoomId,
         name: name !== undefined ? name : rack.name,
+        code: newCode,
+        description: description !== undefined ? description : rack.description,
+        floor: floor !== undefined ? floor : rack.floor,
         isActive: isActive !== undefined ? isActive : rack.isActive
       },
       include: {
-        room: true
+        room: {
+          include: {
+            warehouse: true
+          }
+        }
       }
     });
   }

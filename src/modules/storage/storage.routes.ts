@@ -2,9 +2,19 @@ import { Router } from 'express';
 import { StorageController } from './storage.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { skipRouterUnlessPathMatches } from '../../middleware/scoped-router.middleware';
 
 const router = Router();
 
+const STORAGE_PATH_PREFIXES = [
+  '/warehouses/',
+  '/rooms/',
+  '/racks/',
+  '/shelves/',
+  '/locations/',
+];
+
+router.use(skipRouterUnlessPathMatches(STORAGE_PATH_PREFIXES));
 router.use(requireAuth as any);
 
 // Rooms

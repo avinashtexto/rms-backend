@@ -16,6 +16,7 @@ router.delete('/:id', requirePermission('room:manage') as any, RoomController.de
 // Row sub-routes
 router.get('/:roomId/rows', requirePermission('room:view') as any, RoomController.listRows as any);
 router.post('/:roomId/rows', requirePermission('room:manage') as any, RoomController.createRow as any);
+router.put('/:roomId/rows/:rowId', requirePermission('room:manage') as any, RoomController.updateRow as any);
 router.delete('/:roomId/rows/:rowId', requirePermission('room:manage') as any, RoomController.deleteRow as any);
 
 export default router;

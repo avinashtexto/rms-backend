@@ -2,9 +2,13 @@ import { Router } from 'express';
 import { BoxController } from './box.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { skipRouterUnlessPathMatches } from '../../middleware/scoped-router.middleware';
 
 const router = Router();
 
+const BOX_PATH_PREFIXES = ['/search', '/boxes', '/files'];
+
+router.use(skipRouterUnlessPathMatches(BOX_PATH_PREFIXES));
 router.use(requireAuth as any);
 
 // Global Search

@@ -34,6 +34,48 @@ export class DashboardService {
     };
   }
 
+  static async getSuperAdminSummary() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [
+      totalCompanies,
+      totalBranches,
+      totalSites,
+      totalWarehouses,
+      totalUsers,
+      totalClients,
+      totalVendors,
+      totalBoxes,
+      totalFiles,
+      scansToday
+    ] = await Promise.all([
+      prisma.company.count({ where: { isActive: true } }),
+      prisma.branch.count({ where: { isActive: true, deletedAt: null } }),
+      prisma.site.count({ where: { isActive: true } }),
+      prisma.warehouse.count({ where: { isActive: true } }),
+      prisma.user.count({ where: { status: 'ACTIVE' } }),
+      prisma.client.count({ where: { isActive: true } }),
+      prisma.vendor.count({ where: { isActive: true } }),
+      prisma.box.count({ where: { status: 'ACTIVE' } }),
+      prisma.fileRecord.count({ where: { status: 'ACTIVE' } }),
+      prisma.freshBoxMoveScan.count({ where: { scannedAt: { gte: today } } })
+    ]);
+
+    return {
+      totalCompanies,
+      totalBranches,
+      totalSites,
+      totalWarehouses,
+      totalUsers,
+      totalClients,
+      totalVendors,
+      totalBoxes,
+      totalFiles,
+      scansToday
+    };
+  }
+
   static async getScanActivity(companyId: string, days: number = 7) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);

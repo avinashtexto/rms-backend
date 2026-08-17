@@ -7,7 +7,8 @@ export class RackController {
   static async listRacks(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const roomId = req.query.roomId as string | undefined;
-      const racks = await RackService.listRacks(roomId);
+      const warehouseId = req.query.warehouseId as string | undefined;
+      const racks = await RackService.listRacks({ roomId, warehouseId });
       res.status(200).json({
         success: true,
         data: racks
@@ -33,7 +34,13 @@ export class RackController {
   static async createRack(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = createRackSchema.parse(req.body);
-      const rack = await RackService.createRack(data.roomId, data.name, data.code);
+      const rack = await RackService.createRack(
+        data.roomId,
+        data.name,
+        data.code,
+        data.description,
+        data.floor
+      );
       res.status(201).json({
         success: true,
         data: rack
@@ -47,7 +54,15 @@ export class RackController {
     try {
       const rackId = req.params.rackId as string;
       const data = updateRackSchema.parse(req.body);
-      const rack = await RackService.updateRack(rackId, data.name, data.isActive);
+      const rack = await RackService.updateRack(
+        rackId,
+        data.name,
+        data.isActive,
+        data.description,
+        data.floor,
+        data.roomId,
+        data.code
+      );
       res.status(200).json({
         success: true,
         data: rack

@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { RoomService } from './room.service';
-import { createRoomSchema, updateRoomSchema, createRowSchema } from './room.validation';
+import { createRoomSchema, updateRoomSchema, createRowSchema, updateRowSchema } from './room.validation';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 export class RoomController {
@@ -33,7 +33,13 @@ export class RoomController {
   static async createRoom(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = createRoomSchema.parse(req.body);
-      const room = await RoomService.createRoom(data.warehouseId, data.name, data.code, data.description);
+      const room = await RoomService.createRoom(
+        data.warehouseId,
+        data.name,
+        data.code,
+        data.description,
+        data.location
+      );
       res.status(201).json({
         success: true,
         data: room
@@ -53,7 +59,8 @@ export class RoomController {
         data.isActive,
         data.description,
         data.warehouseId,
-        data.code
+        data.code,
+        data.location
       );
       res.status(200).json({
         success: true,
@@ -91,8 +98,20 @@ export class RoomController {
     try {
       const roomId = req.params.roomId as string;
       const data = createRowSchema.parse(req.body);
-      const row = await RoomService.createRow(roomId, data.name, data.code);
+      const row = await RoomService.createRow(roomId, data);
       res.status(201).json({ success: true, data: row });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateRow(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const roomId = req.params.roomId as string;
+      const rowId = req.params.rowId as string;
+      const data = updateRowSchema.parse(req.body);
+      const row = await RoomService.updateRow(roomId, rowId, data);
+      res.status(200).json({ success: true, data: row });
     } catch (error) {
       next(error);
     }

@@ -3,6 +3,30 @@ import { AuthenticatedRequest } from '../modules/auth/auth.types';
 import { ErrorCode } from '../lib/error-codes';
 import { prisma } from '../lib/prisma';
 
+/** Route-level keys mapped to canonical seeded permission keys. */
+const PERMISSION_ALIASES: Record<string, string[]> = {
+  'room:view': ['storage:view'],
+  'room:manage': ['storage:manage'],
+  'rack:view': ['storage:view'],
+  'rack:manage': ['storage:manage'],
+  'shelf:view': ['storage:view'],
+  'shelf:manage': ['storage:manage'],
+  'location:view': ['storage:view'],
+  'location:manage': ['storage:manage'],
+  'rack-template:view': ['storage:view', 'settings:view'],
+  'rack-template:create': ['storage:manage', 'settings:view'],
+  'rack-template:update': ['storage:manage', 'settings:view'],
+  'rack-template:delete': ['storage:manage', 'settings:view'],
+  'rack-template:clone': ['storage:manage', 'settings:view'],
+  'rack-template:apply': ['storage:manage', 'settings:view'],
+  'rack-template:preview': ['storage:view', 'settings:view'],
+  'report:generate': ['report:view'],
+};
+
+function acceptedPermissionKeys(permissionKey: string): string[] {
+  return [permissionKey, ...(PERMISSION_ALIASES[permissionKey] ?? [])];
+}
+
 export const requirePermission = (permissionKey: string) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -21,12 +45,14 @@ export const requirePermission = (permissionKey: string) => {
         return next();
       }
 
-      // Check if user's role has the requested permission
+      const permissionKeys = acceptedPermissionKeys(permissionKey);
+
+      // Check if user's role has the requested permission (or an accepted alias)
       const hasPermission = await prisma.rolePermission.findFirst({
         where: {
           roleId: req.user.roleId,
           permission: {
-            key: permissionKey
+            key: { in: permissionKeys }
           }
         }
       });

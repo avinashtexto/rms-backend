@@ -77,6 +77,20 @@ adminRouter.use('/workflows/inventory-verify', inventoryVerifyRoutes);
 adminRouter.use('/workflows/refile', refileRoutes);
 adminRouter.use('/workflows/custody-move', custodyMoveRoutes);
 
+// Stop unmatched admin routes before root-level routers that require auth
+adminRouter.use((req, res, next) => {
+  if (req.path.startsWith('/auth')) {
+    return res.status(405).json({
+      success: false,
+      error: {
+        code: 'METHOD_NOT_ALLOWED',
+        message: 'Use POST with email and password to log in.'
+      }
+    });
+  }
+  next();
+});
+
 // Shared/root-level modules (storage, box, settings define their own sub-paths)
 adminRouter.use('/', storageRoutes);
 adminRouter.use('/', boxRoutes);

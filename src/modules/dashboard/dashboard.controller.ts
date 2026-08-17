@@ -66,4 +66,19 @@ export class DashboardController {
       next(error);
     }
   }
+
+  static async getSuperAdminSummary(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (req.user!.roleName !== 'SUPER_ADMIN') {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Super Admin access required' }
+        });
+      }
+      const summary = await DashboardService.getSuperAdminSummary();
+      res.status(200).json({ success: true, data: summary });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
