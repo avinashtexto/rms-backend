@@ -2,11 +2,13 @@ import { Router } from 'express';
 import { RoleController } from './role.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { blockForWarehouseManager } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 // Apply auth middleware to all routes in this router
 router.use(requireAuth as any);
+router.use(blockForWarehouseManager as any);
 
 router.get('/', requirePermission('role:view') as any, RoleController.listRoles as any);
 router.post('/', requirePermission('role:manage') as any, RoleController.createRole as any);

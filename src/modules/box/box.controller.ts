@@ -12,13 +12,16 @@ export class BoxController {
     try {
       const companyId = req.user!.companyId;
       const query = listBoxQuerySchema.parse(req.query);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+      const warehouseId = isWarehouseManager ? req.user?.warehouseId : (req.query.warehouseId as string | undefined);
       const result = await BoxService.listBoxes(
         companyId,
         {
           clientId: query.clientId,
           departmentId: query.departmentId,
           status: query.status,
-          locationId: query.locationId
+          locationId: query.locationId,
+          warehouseId
         },
         query.page,
         query.pageSize
@@ -38,6 +41,21 @@ export class BoxController {
       const companyId = req.user!.companyId;
       const boxId = req.params.boxId as string;
       const box = await BoxService.getBoxById(companyId, boxId);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+
+      if (isWarehouseManager && req.user?.warehouseId) {
+        const boxWarehouseId = box.currentLocation?.shelf?.rack?.room?.warehouseId;
+        if (boxWarehouseId && boxWarehouseId !== req.user.warehouseId) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              code: 'FORBIDDEN',
+              message: "You don't have access to this box."
+            }
+          });
+        }
+      }
+
       res.status(200).json({ success: true, data: box });
     } catch (error) {
       next(error);

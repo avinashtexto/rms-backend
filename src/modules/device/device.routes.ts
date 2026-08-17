@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { DeviceController } from './device.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { blockForWarehouseManager } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(blockForWarehouseManager as any);
 
 router.get('/', requirePermission('device:view') as any, DeviceController.listDevices as any);
 router.get('/:deviceId', requirePermission('device:view') as any, DeviceController.getDeviceById as any);

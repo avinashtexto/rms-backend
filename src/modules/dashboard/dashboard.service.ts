@@ -1,9 +1,95 @@
 import { prisma } from '../../lib/prisma';
 
 export class DashboardService {
-  static async getDashboardMetrics(companyId: string) {
+  static async getDashboardMetrics(companyId: string, warehouseId?: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    if (warehouseId) {
+      const locationWhere = { shelf: { rack: { room: { warehouseId } } } };
+      const boxWhere = { companyId, currentLocation: locationWhere };
+
+      const [
+        totalRooms,
+        totalRacks,
+        totalLocations,
+        occupiedLocations,
+        totalBoxes,
+        activeBoxes,
+        totalFiles,
+        scansToday,
+        pendingWorkOrders,
+        todayFreshBoxMoves,
+        todayTransfers,
+        todayRefiles,
+        pendingSegregations
+      ] = await Promise.all([
+        prisma.room.count({ where: { warehouseId, isActive: true } }),
+        prisma.rack.count({ where: { room: { warehouseId } } }),
+        prisma.location.count({ where: locationWhere }),
+        prisma.location.count({ where: { ...locationWhere, isOccupied: true } }),
+        prisma.box.count({ where: boxWhere }),
+        prisma.box.count({ where: { ...boxWhere, status: 'ACTIVE' } }),
+        prisma.fileRecord.count({
+          where: { companyId, box: boxWhere, status: 'ACTIVE' }
+        }),
+        prisma.freshBoxMoveScan.count({
+          where: {
+            scannedAt: { gte: today },
+            location: locationWhere
+          }
+        }),
+        prisma.workOrder.count({
+          where: {
+            companyId,
+            status: { in: ['PENDING', 'IN_PROGRESS'] as any }
+          }
+        }).catch(() => 0),
+        prisma.freshBoxMoveScan.count({
+          where: {
+            scannedAt: { gte: today },
+            location: locationWhere
+          }
+        }),
+        prisma.transfer.count({
+          where: {
+            OR: [{ fromWarehouseId: warehouseId }, { toWarehouseId: warehouseId }],
+            createdAt: { gte: today }
+          }
+        }).catch(() => 0),
+        prisma.refileEvent.count({
+          where: {
+            createdAt: { gte: today },
+            location: locationWhere
+          }
+        }).catch(() => 0),
+        prisma.segregationSession.count({
+          where: {
+            status: 'PENDING' as any
+          }
+        }).catch(() => 0)
+      ]);
+
+      return {
+        warehouseId,
+        totalRooms,
+        totalRacks,
+        totalLocations,
+        occupiedLocations,
+        availableLocations: Math.max(0, totalLocations - occupiedLocations),
+        occupancyRate: totalLocations > 0 ? Math.round((occupiedLocations / totalLocations) * 100) : 0,
+        totalBoxes,
+        activeBoxes,
+        totalFiles,
+        scansToday,
+        pendingOperations: pendingWorkOrders + pendingSegregations,
+        pendingWorkOrders,
+        todayFreshBoxMoves,
+        todayTransfers,
+        todayRefiles,
+        pendingSegregations
+      };
+    }
 
     const [totalWarehouses, totalBoxes, totalFiles, scansToday, activeUsers] = await Promise.all([
       prisma.warehouse.count({
@@ -76,16 +162,22 @@ export class DashboardService {
     };
   }
 
-  static async getScanActivity(companyId: string, days: number = 7) {
+  static async getScanActivity(companyId: string, days: number = 7, warehouseId?: string) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
+    const where: any = {
+      scannedAt: { gte: startDate }
+    };
+
+    if (warehouseId) {
+      where.location = { shelf: { rack: { room: { warehouseId } } } };
+    }
+
     const scans = await prisma.freshBoxMoveScan.groupBy({
       by: ['scannedAt'],
-      where: {
-        scannedAt: { gte: startDate }
-      },
+      where,
       _count: {
         id: true
       },
@@ -116,9 +208,17 @@ export class DashboardService {
     return result;
   }
 
-  static async getRecentActivity(companyId: string, limit: number = 10) {
+  static async getRecentActivity(companyId: string, limit: number = 10, warehouseId?: string) {
+    const where: any = { companyId };
+    if (warehouseId) {
+      where.OR = [
+        { warehouseId },
+        { location: { shelf: { rack: { room: { warehouseId } } } } }
+      ];
+    }
+
     const logs = await prisma.auditLog.findMany({
-      where: { companyId },
+      where,
       include: {
         user: { select: { id: true, fullName: true } }
       },

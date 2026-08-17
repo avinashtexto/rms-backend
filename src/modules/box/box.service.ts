@@ -10,7 +10,7 @@ export class BoxService {
   
   static async listBoxes(
     companyId: string,
-    filters: { clientId?: string; departmentId?: string | null; status?: BoxStatus; locationId?: string },
+    filters: { clientId?: string; departmentId?: string | null; status?: BoxStatus; locationId?: string; warehouseId?: string | null },
     page: number = 1,
     pageSize: number = 20
   ) {
@@ -20,7 +20,18 @@ export class BoxService {
       ...(filters.clientId && { clientId: filters.clientId }),
       ...(filters.departmentId !== undefined && { departmentId: filters.departmentId }),
       ...(filters.status && { status: filters.status }),
-      ...(filters.locationId && { currentLocationId: filters.locationId })
+      ...(filters.locationId && { currentLocationId: filters.locationId }),
+      ...(filters.warehouseId && {
+        currentLocation: {
+          shelf: {
+            rack: {
+              room: {
+                warehouseId: filters.warehouseId
+              }
+            }
+          }
+        }
+      })
     };
 
     const [boxes, total] = await prisma.$transaction([

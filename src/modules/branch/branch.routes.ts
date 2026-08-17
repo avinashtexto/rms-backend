@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { BranchController } from './branch.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { blockForWarehouseManager } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(blockForWarehouseManager as any);
 
 router.get('/', requirePermission('branch:view') as any, BranchController.listBranches as any);
 router.get('/:id', requirePermission('branch:view') as any, BranchController.getBranchById as any);

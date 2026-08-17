@@ -8,7 +8,9 @@ export class WarehouseController {
     try {
       const companyId = req.user!.companyId;
       const query = listWarehousesQuerySchema.parse(req.query);
-      const result = await WarehouseService.listWarehouses(companyId, query.page, query.pageSize);
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+      const scopedWarehouseId = isWarehouseManager ? req.user?.warehouseId : undefined;
+      const result = await WarehouseService.listWarehouses(companyId, query.page, query.pageSize, scopedWarehouseId);
       res.status(200).json({
         success: true,
         data: result.data,
@@ -23,6 +25,18 @@ export class WarehouseController {
     try {
       const companyId = req.user!.companyId;
       const warehouseId = req.params.id as string;
+      const isWarehouseManager = req.user?.roleName === 'WAREHOUSE_MANAGER';
+
+      if (isWarehouseManager && req.user?.warehouseId && req.user.warehouseId !== warehouseId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: "You don't have access to this warehouse."
+          }
+        });
+      }
+
       const warehouse = await WarehouseService.getWarehouseById(companyId, warehouseId);
       res.status(200).json({
         success: true,

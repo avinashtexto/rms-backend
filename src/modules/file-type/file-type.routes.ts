@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { FileTypeController } from './file-type.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { blockForWarehouseManager } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 router.use(requireAuth as any);
+router.use(blockForWarehouseManager as any);
 
 router.get('/', FileTypeController.list as any);
 router.post('/', FileTypeController.create as any);

@@ -3,11 +3,21 @@ import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 
 export class WarehouseService {
-  static async listWarehouses(companyId: string, page: number = 1, pageSize: number = 20) {
+  static async listWarehouses(
+    companyId: string,
+    page: number = 1,
+    pageSize: number = 20,
+    warehouseId?: string | null
+  ) {
     const skip = (page - 1) * pageSize;
+    const where: any = {
+      companyId,
+      ...(warehouseId && { id: warehouseId })
+    };
+
     const [warehouses, total] = await Promise.all([
       prisma.warehouse.findMany({
-        where: { companyId },
+        where,
         include: {
           site: {
             include: {
@@ -19,7 +29,7 @@ export class WarehouseService {
         skip,
         take: pageSize
       }),
-      prisma.warehouse.count({ where: { companyId } })
+      prisma.warehouse.count({ where })
     ]);
 
     return {

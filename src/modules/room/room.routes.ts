@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { RoomController } from './room.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { enforceWarehouseScope } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
 router.use(requireAuth as any);
+router.use(enforceWarehouseScope as any);
 
 router.get('/', requirePermission('room:view') as any, RoomController.listRooms as any);
 router.get('/:id', requirePermission('room:view') as any, RoomController.getRoom as any);

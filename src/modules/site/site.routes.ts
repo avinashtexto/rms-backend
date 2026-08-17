@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { SiteController } from './site.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { blockForWarehouseManager } from '../../middleware/warehouse-scope.middleware';
 
 const router = Router();
 
@@ -9,6 +10,7 @@ const router = Router();
 router.get('/public', SiteController.listPublicSites as any);
 
 router.use(requireAuth as any);
+router.use(blockForWarehouseManager as any);
 
 router.get('/', requirePermission('site:view') as any, SiteController.listSites as any);
 router.get('/:id', requirePermission('site:view') as any, SiteController.getSiteById as any);
