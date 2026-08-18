@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createFileRecordSchema = z.object({
   boxId: z.string().uuid(),
-  barcode: z.string().min(1),
+  barcode: z.string().optional(),
   title: z.string().optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED', 'DESTROYED']).optional()
 });

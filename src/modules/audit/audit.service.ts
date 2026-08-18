@@ -108,29 +108,31 @@ function resolveEntityTypeAndId(log: {
     null;
 
   const actionStr = String(log.action);
-  let entityType = 'OTHER';
+  let entityType = state?.entityType ? String(state.entityType) : 'OTHER';
 
-  if (actionStr.includes('BOX')) entityType = 'BOX';
-  else if (actionStr.includes('FILE') || actionStr.includes('REFILE')) entityType = 'FILE_RECORD';
-  else if (actionStr.includes('LOCATION')) entityType = 'LOCATION';
-  else if (actionStr.includes('WAREHOUSE')) entityType = 'WAREHOUSE';
-  else if (actionStr.includes('BRANCH')) entityType = 'BRANCH';
-  else if (actionStr.includes('SITE')) entityType = 'SITE';
-  else if (actionStr.includes('ROOM')) entityType = 'ROOM';
-  else if (actionStr.includes('RACK_TEMPLATE')) entityType = 'RACK_TEMPLATE';
-  else if (actionStr.includes('RACK')) entityType = 'RACK';
-  else if (actionStr.includes('SHELF')) entityType = 'SHELF';
-  else if (actionStr.includes('CLIENT')) entityType = 'CLIENT';
-  else if (actionStr.includes('DEPARTMENT')) entityType = 'DEPARTMENT';
-  else if (actionStr.includes('USER') || actionStr.startsWith('AUTH_')) entityType = 'USER';
-  else if (actionStr.includes('DEVICE')) entityType = 'DEVICE';
-  else if (actionStr.includes('BARCODE')) entityType = 'BARCODE';
-  else if (actionStr.includes('WORK_ORDER')) entityType = 'WORK_ORDER';
-  else if (actionStr.includes('SERVICE_REQUEST')) entityType = 'SERVICE_REQUEST';
-  else if (actionStr.includes('TRANSFER')) entityType = 'TRANSFER';
-  else if (actionStr.includes('SEGREGATION')) entityType = 'SEGREGATION';
-  else if (actionStr.includes('MERGE')) entityType = 'MERGE';
-  else if (actionStr.includes('INVENTORY')) entityType = 'INVENTORY';
+  if (entityType === 'OTHER') {
+    if (actionStr.includes('BOX')) entityType = 'BOX';
+    else if (actionStr.includes('FILE') || actionStr.includes('REFILE')) entityType = 'FILE_RECORD';
+    else if (actionStr.includes('LOCATION')) entityType = 'LOCATION';
+    else if (actionStr.includes('WAREHOUSE')) entityType = 'WAREHOUSE';
+    else if (actionStr.includes('BRANCH')) entityType = 'BRANCH';
+    else if (actionStr.includes('SITE')) entityType = 'SITE';
+    else if (actionStr.includes('ROOM')) entityType = 'ROOM';
+    else if (actionStr.includes('RACK_TEMPLATE')) entityType = 'RACK_TEMPLATE';
+    else if (actionStr.includes('RACK')) entityType = 'RACK';
+    else if (actionStr.includes('SHELF')) entityType = 'SHELF';
+    else if (actionStr.includes('CLIENT')) entityType = 'CLIENT';
+    else if (actionStr.includes('DEPARTMENT')) entityType = 'DEPARTMENT';
+    else if (actionStr.includes('USER') || actionStr.startsWith('AUTH_')) entityType = 'USER';
+    else if (actionStr.includes('DEVICE')) entityType = 'DEVICE';
+    else if (actionStr.includes('BARCODE')) entityType = 'BARCODE';
+    else if (actionStr.includes('WORK_ORDER')) entityType = 'WORK_ORDER';
+    else if (actionStr.includes('SERVICE_REQUEST')) entityType = 'SERVICE_REQUEST';
+    else if (actionStr.includes('TRANSFER')) entityType = 'TRANSFER';
+    else if (actionStr.includes('SEGREGATION')) entityType = 'SEGREGATION';
+    else if (actionStr.includes('MERGE')) entityType = 'MERGE';
+    else if (actionStr.includes('INVENTORY')) entityType = 'INVENTORY';
+  }
 
   let finalEntityId = candidateId;
   if (!finalEntityId && (actionStr.startsWith('AUTH_') || entityType === 'USER')) {

@@ -17,10 +17,12 @@ export class ScanController {
   static async submitScan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = submitScanSchema.parse(req.body);
+      const deviceId = (req.headers['x-device-id'] as string) || (req as any).deviceId || null;
       const result = await ScanService.submitScan(
         req.user!.companyId,
         req.user!.id,
-        data
+        data,
+        deviceId
       );
       res.status(201).json({ success: true, data: result });
     } catch (error) {

@@ -13,14 +13,16 @@ router.get('/stats', requirePermission('settings:view') as any, BarcodeMasterCon
 // Scanning / Validation API
 router.post('/validate', BarcodeMasterController.validateBarcode as any);
 router.get('/search', BarcodeMasterController.search as any);
+router.get('/next-box', requirePermission(['box:view', 'settings:view']) as any, BarcodeMasterController.getNextBoxBarcode as any);
+router.get('/next-file', requirePermission(['file:view', 'settings:view']) as any, BarcodeMasterController.getNextFileBarcode as any);
 
 // Bulk Operations
-router.post('/generate', requirePermission('settings:manage') as any, BarcodeMasterController.bulkGenerate as any);
-router.post('/import', requirePermission('settings:manage') as any, BarcodeMasterController.importBarcodes as any);
-router.get('/export', requirePermission('settings:view') as any, BarcodeMasterController.exportBarcodes as any);
-router.post('/print', requirePermission('settings:view') as any, BarcodeMasterController.printBarcodes as any);
-router.post('/bulk-action', requirePermission('settings:manage') as any, BarcodeMasterController.bulkAction as any);
-router.post('/bulk-assign', requirePermission('settings:manage') as any, BarcodeMasterController.bulkAssign as any);
+router.post('/generate', requirePermission(['box:manage', 'file:manage', 'settings:manage']) as any, BarcodeMasterController.bulkGenerate as any);
+router.post('/import', requirePermission(['box:manage', 'file:manage', 'settings:manage']) as any, BarcodeMasterController.importBarcodes as any);
+router.get('/export', requirePermission(['box:view', 'file:view', 'settings:view']) as any, BarcodeMasterController.exportBarcodes as any);
+router.post('/print', requirePermission(['box:view', 'file:view', 'settings:view']) as any, BarcodeMasterController.printBarcodes as any);
+router.post('/bulk-action', requirePermission(['box:manage', 'file:manage', 'settings:manage']) as any, BarcodeMasterController.bulkAction as any);
+router.post('/bulk-assign', requirePermission(['box:manage', 'file:manage', 'settings:manage']) as any, BarcodeMasterController.bulkAssign as any);
 
 
 // Standard CRUD Endpoints

@@ -2,6 +2,8 @@ import { Router, Response, NextFunction } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { AuthenticatedRequest } from '../auth/auth.types';
 import { prisma } from '../../lib/prisma';
+import { AuditService } from '../audit/audit.service';
+import { FileRecordService } from '../fileRecord/fileRecord.service';
 
 /**
  * Mobile search endpoints.
@@ -135,27 +137,103 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
     const companyId = req.user!.companyId;
     const boxId = String(req.params.id);
 
-    const box: any = await prisma.box.findFirst({
+    let box: any = await prisma.box.findFirst({
       where: {
         companyId,
         OR: [{ id: boxId }, { barcode: boxId }]
       },
       include: {
         client: true,
-        currentLocation: true,
+        currentLocation: {
+          include: {
+            shelf: {
+              include: {
+                rack: {
+                  include: {
+                    room: {
+                      include: {
+                        warehouse: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         fileRecords: true
       }
     });
 
     if (!box) {
+      // Check BarcodeMaster for pre-generated/registered Box barcodes
+      const barcodeMaster = await prisma.barcodeMaster.findFirst({
+        where: {
+          companyId,
+          OR: [{ id: boxId }, { barcode: boxId }],
+          type: 'BOX'
+        },
+        include: { warehouse: true, site: true, branch: true }
+      });
+
+      if (barcodeMaster) {
+        if (barcodeMaster.assignedToId) {
+          box = await prisma.box.findFirst({
+            where: { id: barcodeMaster.assignedToId, companyId },
+            include: {
+              client: true,
+              currentLocation: {
+                include: {
+                  shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
+                }
+              },
+              fileRecords: true
+            }
+          });
+        }
+
+        if (!box) {
+          return res.status(200).json({
+            success: true,
+            data: {
+              id: barcodeMaster.id,
+              barcode: barcodeMaster.barcode,
+              name: barcodeMaster.remarks || `Box Barcode ${barcodeMaster.barcode}`,
+              location: barcodeMaster.warehouse?.name ?? 'Unassigned',
+              status: barcodeMaster.status,
+              fileCount: 0,
+              lastActivity: barcodeMaster.updatedAt ? new Date(barcodeMaster.updatedAt).toISOString() : new Date().toISOString(),
+              contents: [],
+              clientId: '',
+              clientName: null
+            }
+          });
+        }
+      }
+    }
+
+    if (!box) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Box not found' } });
+    }
+
+    const loc = box.currentLocation;
+    let locationStr = 'Unassigned';
+    if (loc) {
+      const parts = [
+        loc.shelf?.rack?.room?.warehouse?.name,
+        loc.shelf?.rack?.room?.name,
+        loc.shelf?.rack?.name,
+        loc.shelf?.name,
+        loc.name
+      ].filter(Boolean);
+      locationStr = parts.length > 0 ? parts.join(' › ') : loc.name;
     }
 
     const boxDetail = {
       id: box.id,
       barcode: box.barcode,
       name: box.description ?? null,
-      location: box.currentLocation?.name ?? 'Unassigned',
+      location: locationStr,
       status: box.status,
       fileCount: box.fileRecords?.length ?? 0,
       lastActivity: box.updatedAt ? new Date(box.updatedAt).toISOString() : new Date().toISOString(),
@@ -256,6 +334,163 @@ router.get('/search/files/:id', async (req: AuthenticatedRequest, res: Response,
     };
 
     res.status(200).json({ success: true, data: fileDetail });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /search/boxes/:id/files -> insert file into box
+router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const companyId = req.user!.companyId;
+    const userId = req.user!.id;
+    const deviceId = (req.headers['x-device-id'] as string) || (req as any).deviceId || null;
+    const boxId = String(req.params.id);
+    const { fileBarcode, title } = req.body ?? {};
+
+    const cleanFileBarcode = fileBarcode ? String(fileBarcode).trim().toUpperCase() : '';
+    if (!cleanFileBarcode) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'File barcode is required' } });
+    }
+
+    // Resolve target Box
+    let box = await prisma.box.findFirst({
+      where: {
+        companyId,
+        OR: [{ id: boxId }, { barcode: boxId }]
+      },
+      include: {
+        currentLocation: {
+          include: {
+            shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
+          }
+        }
+      }
+    });
+
+    if (!box) {
+      // Check if boxId was a BarcodeMaster entry and create Box record on the fly if needed
+      const barcodeMaster = await prisma.barcodeMaster.findFirst({
+        where: {
+          companyId,
+          OR: [{ id: boxId }, { barcode: boxId }],
+          type: 'BOX'
+        }
+      });
+      if (barcodeMaster) {
+        const fallbackClient = await prisma.client.findFirst({ where: { companyId } });
+        if (fallbackClient) {
+          box = await prisma.box.create({
+            data: {
+              companyId,
+              clientId: fallbackClient.id,
+              barcode: barcodeMaster.barcode,
+              description: barcodeMaster.remarks || `Box ${barcodeMaster.barcode}`,
+              capacity: 25
+            },
+            include: {
+              currentLocation: {
+                include: {
+                  shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
+                }
+              }
+            }
+          });
+
+          await prisma.barcodeMaster.update({
+            where: { id: barcodeMaster.id },
+            data: {
+              isAssigned: true,
+              status: 'ASSIGNED',
+              assignedToType: 'BOX',
+              assignedToId: box.id,
+              assignedAt: new Date()
+            }
+          });
+        }
+      }
+    }
+
+    if (!box) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Box not found' } });
+    }
+
+    // Check if file already exists in database
+    let file = await prisma.fileRecord.findFirst({
+      where: { companyId, barcode: cleanFileBarcode },
+      include: { box: true }
+    });
+
+    if (file) {
+      if (file.boxId) {
+        if (file.boxId === box.id) {
+          return res.status(400).json({
+            success: false,
+            error: { code: 'DUPLICATE', message: `File '${cleanFileBarcode}' is already assigned to this Box (${box.barcode}).` }
+          });
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: { code: 'ALREADY_ASSIGNED', message: `File '${cleanFileBarcode}' is already assigned to Box '${file.box?.barcode || file.boxId}'.` }
+          });
+        }
+      }
+
+      file = await prisma.fileRecord.update({
+        where: { id: file.id },
+        data: {
+          boxId: box.id,
+          status: 'ACTIVE'
+        },
+        include: { box: true }
+      });
+
+      await AuditService.recordAuditLog({
+        companyId,
+        userId,
+        action: 'FILE_RECORD_UPDATED',
+        entityType: 'FILE_RECORD',
+        entityId: file.id,
+        fileRecordId: file.id,
+        boxId: box.id,
+        locationId: box.currentLocationId,
+        warehouseId: box.currentLocation?.shelf?.rack?.room?.warehouse?.id || null,
+        deviceId,
+        previousState: { boxId: prevBoxId },
+        newState: {
+          action: 'FILE_INSERTED_IN_BOX',
+          fileBarcode: file.barcode,
+          boxBarcode: box.barcode,
+          boxId: box.id
+        }
+      });
+    } else {
+      file = await FileRecordService.createFileRecord(
+        companyId,
+        box.id,
+        cleanFileBarcode,
+        title || `File ${cleanFileBarcode}`,
+        'ACTIVE',
+        userId,
+        deviceId
+      );
+    }
+
+    if (!file) {
+      return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create or update file record' } });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: file.id,
+        barcode: file.barcode,
+        title: (file as any).title ?? file.barcode,
+        boxId: box.id,
+        boxBarcode: box.barcode
+      },
+      message: `File ${file.barcode} inserted into Box ${box.barcode} successfully`
+    });
   } catch (error) {
     next(error);
   }

@@ -35,7 +35,15 @@ export class FileRecordController {
   static async createFileRecord(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = createFileRecordSchema.parse(req.body);
-      const fileRecord = await FileRecordService.createFileRecord(req.user!.companyId, data.boxId, data.barcode, data.title, data.status);
+      const fileRecord = await FileRecordService.createFileRecord(
+        req.user!.companyId,
+        data.boxId,
+        data.barcode,
+        data.title,
+        data.status,
+        req.user?.id,
+        (req.headers['x-device-id'] as string) || null
+      );
       res.status(201).json({
         success: true,
         data: fileRecord
@@ -62,11 +70,8 @@ export class FileRecordController {
   static async deleteFileRecord(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const fileRecordId = req.params.fileRecordId as string;
-      await FileRecordService.deleteFileRecord(fileRecordId, req.user!.companyId);
-      res.status(200).json({
-        success: true,
-        message: 'File record deleted successfully'
-      });
+      const result = await FileRecordService.deleteFileRecord(fileRecordId, req.user!.companyId, req.user?.id);
+      res.status(200).json({ success: true, message: 'File record deleted successfully', data: result });
     } catch (error) {
       next(error);
     }
@@ -111,7 +116,7 @@ export class FileRecordController {
         });
       }
 
-      const result = await FileRecordService.bulkActionFileRecords(req.user!.companyId, ids, action);
+      const result = await FileRecordService.bulkActionFileRecords(req.user!.companyId, ids, action, req.user?.id);
       res.status(200).json(result);
     } catch (error) {
       next(error);

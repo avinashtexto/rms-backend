@@ -37,14 +37,21 @@ const corsOrigins = process.env.CORS_ORIGINS
 // Middlewares
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser clients (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    callback(null, true);
+    if (corsOrigins.indexOf(origin) !== -1 || corsOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    // Allow any localhost/127.0.0.1 or local network origin
+    if (/^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-device-id', 'Accept'],
 }));
+app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -82,6 +89,17 @@ app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/imports', importsRoutes);
 app.use('/api/v1/settings', settingsRootRoutes);
 app.use('/api/v1/barcode', barcodeMasterRoutes);
+
+// Health check endpoints
+app.get(['/health', '/healthz', '/api/health', '/api/v1/health'], (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    service: 'rms-backend',
+    port: PORT
+  });
+});
 
 // Basic route
 app.get('/', (req, res) => {

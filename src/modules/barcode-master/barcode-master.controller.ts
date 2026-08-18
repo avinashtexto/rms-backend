@@ -64,8 +64,9 @@ export class BarcodeMasterController {
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
+      const companyId = (req as any).user.companyId;
       const userId = (req as any).user.id || (req as any).user.userId;
-      const result = await BarcodeMasterService.delete(id, userId);
+      const result = await BarcodeMasterService.delete(id, companyId, userId);
       res.json(result);
     } catch (err) {
       next(err);
@@ -154,6 +155,24 @@ export class BarcodeMasterController {
 
       const result = await BarcodeMasterService.validateBarcode(String(barcode), companyId, userId);
       res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getNextBoxBarcode(req: Request, res: Response, next: NextFunction) {
+    try {
+      const nextBarcode = await BarcodeMasterService.generateNextBoxBarcode();
+      res.json({ success: true, data: { barcode: nextBarcode } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getNextFileBarcode(req: Request, res: Response, next: NextFunction) {
+    try {
+      const nextBarcode = await BarcodeMasterService.generateNextFileCode();
+      res.json({ success: true, data: { barcode: nextBarcode, fileCode: nextBarcode } });
     } catch (err) {
       next(err);
     }

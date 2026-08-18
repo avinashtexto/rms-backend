@@ -50,7 +50,8 @@ export class BarcodeMasterService {
 
     const [
       total,
-      boxCount,
+      boxMasterCount,
+      realBoxCount,
       fileCount,
       locationCount,
       assignedCount,
@@ -60,7 +61,8 @@ export class BarcodeMasterService {
     ] = await Promise.all([
       prisma.barcodeMaster.count({ where: { companyId } }),
       prisma.barcodeMaster.count({ where: { companyId, type: BarcodeType.BOX } }),
-      prisma.barcodeMaster.count({ where: { companyId, type: BarcodeType.FILE_RECORD } }),
+      prisma.box.count({ where: { companyId } }),
+      prisma.fileRecord.count({ where: { companyId } }),
       prisma.barcodeMaster.count({ where: { companyId, type: BarcodeType.LOCATION } }),
       prisma.barcodeMaster.count({ where: { companyId, isAssigned: true } }),
       prisma.barcodeMaster.count({ where: { companyId, status: BarcodeStatus.UNASSIGNED } }),
@@ -68,9 +70,11 @@ export class BarcodeMasterService {
       prisma.barcodeMaster.count({ where: { companyId, createdAt: { gte: todayStart } } })
     ]);
 
+    const finalBoxCount = Math.max(realBoxCount, boxMasterCount);
+
     return {
       total,
-      boxCount,
+      boxCount: finalBoxCount,
       fileCount,
       locationCount,
       assignedCount,
@@ -81,6 +85,125 @@ export class BarcodeMasterService {
   }
 
   /**
+   * Automatically generate the next sequential Box barcode (BX + 6 digits).
+   * Scans both Box and BarcodeMaster tables to guarantee global uniqueness.
+   */
+  static async generateNextBoxBarcode(tx?: any): Promise<string> {
+    const client = tx || prisma;
+
+    // Fetch the most recent barcodes matching BX prefix from both tables
+    const [recentBoxes, recentMasters] = await Promise.all([
+      client.box.findMany({
+        where: { barcode: { startsWith: 'BX' } },
+        select: { barcode: true },
+        take: 200,
+        orderBy: { barcode: 'desc' }
+      }),
+      client.barcodeMaster.findMany({
+        where: { barcode: { startsWith: 'BX' } },
+        select: { barcode: true },
+        take: 200,
+        orderBy: { barcode: 'desc' }
+      })
+    ]);
+
+    let maxSequence = 0;
+    const regex = /^BX(\d+)$/i;
+
+    for (const b of recentBoxes) {
+      const match = b.barcode.match(regex);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxSequence) maxSequence = val;
+      }
+    }
+
+    for (const m of recentMasters) {
+      const match = m.barcode.match(regex);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxSequence) maxSequence = val;
+      }
+    }
+
+    // Default start sequence if no BX numbers exist yet
+    let candidateSeq = maxSequence > 0 ? maxSequence + 1 : 171524;
+
+    // Collision avoidance loop
+    while (true) {
+      const candidate = `BX${String(candidateSeq).padStart(6, '0')}`;
+      const [inBox, inMaster] = await Promise.all([
+        client.box.findUnique({ where: { barcode: candidate } }),
+        client.barcodeMaster.findUnique({ where: { barcode: candidate } })
+      ]);
+
+      if (!inBox && !inMaster) {
+        return candidate;
+      }
+      candidateSeq++;
+    }
+  }
+
+  /**
+   * Automatically generate the next sequential File code/barcode (MAC + 7 digits).
+   * Scans both FileRecord and BarcodeMaster tables to guarantee global uniqueness.
+   */
+  static async generateNextFileCode(tx?: any): Promise<string> {
+    const client = tx || prisma;
+
+    const [recentFiles, recentMasters] = await Promise.all([
+      client.fileRecord.findMany({
+        where: { barcode: { startsWith: 'MAC' } },
+        select: { barcode: true },
+        take: 200,
+        orderBy: { barcode: 'desc' }
+      }),
+      client.barcodeMaster.findMany({
+        where: { barcode: { startsWith: 'MAC' } },
+        select: { barcode: true },
+        take: 200,
+        orderBy: { barcode: 'desc' }
+      })
+    ]);
+
+    let maxSequence = 0;
+    const regex = /^MAC(\d+)$/i;
+
+    for (const f of recentFiles) {
+      const match = f.barcode.match(regex);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxSequence) maxSequence = val;
+      }
+    }
+
+    for (const m of recentMasters) {
+      const match = m.barcode.match(regex);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxSequence) maxSequence = val;
+      }
+    }
+
+    // Default start sequence if no MAC numbers exist yet
+    let candidateSeq = maxSequence > 0 ? maxSequence + 1 : 5832438;
+
+    // Collision avoidance loop
+    while (true) {
+      const candidate = `MAC${String(candidateSeq).padStart(7, '0')}`;
+      const [inFile, inMaster] = await Promise.all([
+        client.fileRecord.findUnique({ where: { barcode: candidate } }),
+        client.barcodeMaster.findUnique({ where: { barcode: candidate } })
+      ]);
+
+      if (!inFile && !inMaster) {
+        return candidate;
+      }
+      candidateSeq++;
+    }
+  }
+
+  /**
    * Create single barcode
    */
   static async create(data: {
@@ -88,12 +211,23 @@ export class BarcodeMasterService {
     siteId?: string;
     branchId?: string;
     warehouseId?: string;
-    barcode: string;
+    barcode?: string;
     type: BarcodeType;
     status?: BarcodeStatus;
     remarks?: string;
   }, userId: string) {
-    const cleanBarcode = data.barcode.trim().toUpperCase();
+    let cleanBarcode = data.barcode ? data.barcode.trim().toUpperCase() : '';
+
+    if (!cleanBarcode && data.type === BarcodeType.BOX) {
+      cleanBarcode = await this.generateNextBoxBarcode();
+    } else if (!cleanBarcode && data.type === BarcodeType.FILE_RECORD) {
+      cleanBarcode = await this.generateNextFileCode();
+    } else if (!cleanBarcode) {
+      const err: AppError = new Error('Barcode is required.');
+      err.statusCode = 400;
+      err.code = ErrorCode.VALIDATION_ERROR;
+      throw err;
+    }
 
     // Check duplicate
     const existing = await prisma.barcodeMaster.findUnique({
@@ -394,24 +528,54 @@ export class BarcodeMasterService {
   /**
    * Delete barcode
    */
-  static async delete(id: string, userId: string) {
-    const existing = await prisma.barcodeMaster.findUnique({ where: { id } });
+  static async delete(id: string, companyId: string, userId: string) {
+    const existing = await prisma.barcodeMaster.findFirst({
+      where: { id, companyId }
+    });
 
     if (!existing) {
-      const err: AppError = new Error('Barcode not found');
+      const err: AppError = new Error('Barcode not found or access denied.');
       err.statusCode = 404;
       err.code = ErrorCode.NOT_FOUND;
       throw err;
     }
 
-    if (existing.isAssigned) {
-      const err: AppError = new Error('Cannot delete an assigned barcode.');
+    // Check if an actual active Box, FileRecord, or Location is currently using this barcode
+    const [assignedBox, assignedFile, assignedLocation] = await Promise.all([
+      prisma.box.findFirst({ where: { barcode: existing.barcode, companyId } }),
+      prisma.fileRecord.findFirst({ where: { barcode: existing.barcode, companyId } }),
+      prisma.location.findFirst({
+        where: {
+          barcode: existing.barcode,
+          shelf: { rack: { room: { warehouse: { companyId } } } }
+        }
+      })
+    ]);
+
+    if (assignedBox || assignedFile || assignedLocation) {
+      // If it is genuinely attached to a live record, prevent accidental deletion
+      await prisma.barcodeMaster.update({
+        where: { id: existing.id },
+        data: {
+          isAssigned: true,
+          status: BarcodeStatus.ASSIGNED,
+          assignedToType: assignedBox ? 'BOX' : assignedFile ? 'FILE_RECORD' : 'LOCATION',
+          assignedToId: assignedBox?.id || assignedFile?.id || assignedLocation?.id
+        }
+      });
+      const targetName = assignedBox ? `Box (${assignedBox.barcode})` : assignedFile ? `File (${assignedFile.barcode})` : `Location (${assignedLocation?.barcode})`;
+      const err: AppError = new Error(`Barcode is currently assigned to ${targetName} and cannot be deleted until the record is deleted.`);
       err.statusCode = 400;
       err.code = ErrorCode.BAD_REQUEST;
       throw err;
     }
 
-    await prisma.barcodeMaster.delete({ where: { id } });
+    // Clean any foreign key barcode history references first
+    await prisma.barcodeHistory.deleteMany({
+      where: { barcodeMasterId: existing.id }
+    });
+
+    await prisma.barcodeMaster.delete({ where: { id: existing.id } });
     return { success: true, message: 'Barcode deleted successfully.' };
   }
 
@@ -662,8 +826,21 @@ export class BarcodeMasterService {
    * Print Barcode Labels Payload
    */
   static async printBarcodes(ids: string[], userId: string) {
-    const barcodes = await prisma.barcodeMaster.findMany({
-      where: { id: { in: ids } },
+    if (!Array.isArray(ids) || ids.length === 0) {
+      const err: AppError = new Error('No barcodes provided for printing.');
+      err.statusCode = 400;
+      err.code = ErrorCode.VALIDATION_ERROR;
+      throw err;
+    }
+
+    // 1. First find directly in BarcodeMaster by ID or barcode
+    let barcodes = await prisma.barcodeMaster.findMany({
+      where: {
+        OR: [
+          { id: { in: ids } },
+          { barcode: { in: ids } }
+        ]
+      },
       include: {
         company: { select: { name: true } },
         site: { select: { name: true, code: true } },
@@ -671,8 +848,120 @@ export class BarcodeMasterService {
       }
     });
 
+    const foundBarcodeStrings = new Set(barcodes.map(b => b.barcode));
+    const foundIds = new Set(barcodes.map(b => b.id));
+    const missing = ids.filter(id => !foundIds.has(id) && !foundBarcodeStrings.has(id));
+
+    // 2. If any IDs were Box IDs or FileRecord IDs, look up their physical records
+    if (missing.length > 0) {
+      const [boxes, fileRecords] = await Promise.all([
+        prisma.box.findMany({
+          where: {
+            OR: [
+              { id: { in: missing } },
+              { barcode: { in: missing } }
+            ]
+          },
+          include: {
+            client: { select: { name: true } },
+            currentLocation: {
+              include: {
+                shelf: {
+                  include: {
+                    rack: {
+                      include: {
+                        room: {
+                          include: {
+                            warehouse: { select: { name: true, code: true } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }),
+        prisma.fileRecord.findMany({
+          where: {
+            OR: [
+              { id: { in: missing } },
+              { barcode: { in: missing } }
+            ]
+          },
+          include: {
+            box: {
+              include: {
+                client: { select: { name: true } }
+              }
+            }
+          }
+        })
+      ]);
+
+      const extraLabelsFromBoxes = boxes.map(b => ({
+        id: b.id,
+        barcode: b.barcode,
+        type: 'BOX' as BarcodeType,
+        status: 'ASSIGNED' as BarcodeStatus,
+        company: b.client?.name || 'RMS',
+        site: '',
+        warehouse: b.currentLocation?.shelf?.rack?.room?.warehouse?.name || '',
+        zpl: `^XA^FO50,50^BY2^BCN,100,Y,N,N^FD${b.barcode}^FS^XZ`
+      }));
+
+      const extraLabelsFromFiles = fileRecords.map(f => ({
+        id: f.id,
+        barcode: f.barcode,
+        type: 'FILE_RECORD' as BarcodeType,
+        status: 'ASSIGNED' as BarcodeStatus,
+        company: f.box?.client?.name || 'RMS',
+        site: '',
+        warehouse: '',
+        zpl: `^XA^FO50,50^BY2^BCN,100,Y,N,N^FD${f.barcode}^FS^XZ`
+      }));
+
+      const masterLabels = barcodes.map(b => ({
+        id: b.id,
+        barcode: b.barcode,
+        type: b.type,
+        status: b.status,
+        company: b.company?.name || 'RMS',
+        site: b.site?.name || '',
+        warehouse: b.warehouse?.name || '',
+        zpl: `^XA^FO50,50^BY2^BCN,100,Y,N,N^FD${b.barcode}^FS^XZ`
+      }));
+
+      const combined = [...masterLabels, ...extraLabelsFromBoxes, ...extraLabelsFromFiles];
+
+      if (combined.length === 0) {
+        const err: AppError = new Error('No barcodes found for the specified IDs.');
+        err.statusCode = 404;
+        err.code = ErrorCode.NOT_FOUND;
+        throw err;
+      }
+
+      // Write print history safely for master barcodes that exist
+      if (barcodes.length > 0) {
+        const historyLogs = barcodes.map(b => ({
+          barcodeMasterId: b.id,
+          barcode: b.barcode,
+          action: 'PRINTED',
+          userId,
+          remarks: 'Barcode label printed'
+        }));
+        await prisma.barcodeHistory.createMany({ data: historyLogs }).catch(() => {});
+      }
+
+      return { total: combined.length, labels: combined };
+    }
+
     if (barcodes.length === 0) {
-      throw new Error('No barcodes found for printing.');
+      const err: AppError = new Error('No barcodes found for printing.');
+      err.statusCode = 404;
+      err.code = ErrorCode.NOT_FOUND;
+      throw err;
     }
 
     // Write print history
@@ -684,7 +973,7 @@ export class BarcodeMasterService {
       remarks: 'Barcode label printed'
     }));
 
-    await prisma.barcodeHistory.createMany({ data: historyLogs });
+    await prisma.barcodeHistory.createMany({ data: historyLogs }).catch(() => {});
 
     // Generate ZPL & JSON format for printers
     const labels = barcodes.map(b => ({
@@ -692,7 +981,7 @@ export class BarcodeMasterService {
       barcode: b.barcode,
       type: b.type,
       status: b.status,
-      company: b.company.name,
+      company: b.company?.name || 'RMS',
       site: b.site?.name || '',
       warehouse: b.warehouse?.name || '',
       zpl: `^XA^FO50,50^BY2^BCN,100,Y,N,N^FD${b.barcode}^FS^XZ`

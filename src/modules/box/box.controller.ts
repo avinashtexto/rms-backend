@@ -65,6 +65,8 @@ export class BoxController {
   static async createBox(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
+      const userId = req.user?.id || (req.user as any)?.userId;
+      const deviceId = req.user?.deviceId || (req.headers['x-device-id'] as string) || null;
       const data = createBoxSchema.parse(req.body);
       const box = await BoxService.createBox(
         companyId,
@@ -72,7 +74,9 @@ export class BoxController {
         data.departmentId,
         data.barcode,
         data.description,
-        data.capacity
+        data.capacity,
+        userId,
+        deviceId
       );
       res.status(201).json({ success: true, data: box });
     } catch (error) {
@@ -145,7 +149,14 @@ export class BoxController {
       const companyId = req.user!.companyId;
       const boxId = req.params.boxId as string;
       const data = createFileRecordSchema.parse(req.body);
-      const file = await BoxService.createFileRecord(companyId, boxId, data.title, data.barcode);
+      const file = await BoxService.createFileRecord(
+        companyId,
+        boxId,
+        data.title,
+        data.barcode,
+        req.user?.id,
+        (req.headers['x-device-id'] as string) || null
+      );
       res.status(201).json({ success: true, data: file });
     } catch (error) {
       next(error);
