@@ -8,5 +8,6 @@ export interface AuthenticatedRequest extends Request {
     roleName: string;
     branchId?: string | null;
     warehouseId?: string | null;
+    deviceId?: string | null;
   };
 }

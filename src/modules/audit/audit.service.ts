@@ -3,29 +3,233 @@ import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
 
-type AuditEntityType = 'BOX' | 'FILE_RECORD' | 'LOCATION' | 'USER' | 'DEVICE';
+export type AuditEntityType =
+  | 'BOX'
+  | 'FILE_RECORD'
+  | 'LOCATION'
+  | 'WAREHOUSE'
+  | 'BRANCH'
+  | 'SITE'
+  | 'ROOM'
+  | 'RACK'
+  | 'SHELF'
+  | 'CLIENT'
+  | 'DEPARTMENT'
+  | 'USER'
+  | 'DEVICE'
+  | 'BARCODE'
+  | 'WORK_ORDER'
+  | 'SERVICE_REQUEST'
+  | 'RACK_TEMPLATE'
+  | 'TRANSFER'
+  | 'SEGREGATION'
+  | 'MERGE'
+  | 'INVENTORY'
+  | 'OTHER';
 
-function auditEntityBarcode(log: {
-  box?: { barcode: string } | null;
-  fileRecord?: { barcode: string } | null;
-  location?: { barcode: string } | null;
+export interface RecordAuditLogParams {
+  companyId: string;
+  userId: string;
+  action: WorkflowAction;
+  entityType?: AuditEntityType | string;
+  entityId?: string | null;
   boxId?: string | null;
   fileRecordId?: string | null;
-}): string | null {
-  return (
-    log.box?.barcode ??
-    log.fileRecord?.barcode ??
-    log.location?.barcode ??
-    log.boxId ??
-    log.fileRecordId ??
-    null
-  );
+  locationId?: string | null;
+  warehouseId?: string | null;
+  branchId?: string | null;
+  deviceId?: string | null;
+  reasonCodeId?: string | null;
+  gpsLat?: number | null;
+  gpsLng?: number | null;
+  previousState?: any;
+  newState?: any;
+  tx?: Prisma.TransactionClient;
+}
+
+function resolveEntityTypeAndId(log: {
+  action: WorkflowAction | string;
+  boxId?: string | null;
+  fileRecordId?: string | null;
+  locationId?: string | null;
+  warehouseId?: string | null;
+  branchId?: string | null;
+  deviceId?: string | null;
+  box?: { id: string; barcode?: string | null } | null;
+  fileRecord?: { id: string; barcode?: string | null; title?: string | null } | null;
+  location?: { id: string; barcode?: string | null; name?: string | null } | null;
+  previousState?: any;
+  newState?: any;
+}): { entityType: string; entityId: string | null } {
+  // 1. Direct foreign keys from AuditLog schema
+  if (log.boxId || log.box?.id) {
+    return { entityType: 'BOX', entityId: log.boxId ?? log.box?.id ?? null };
+  }
+  if (log.fileRecordId || log.fileRecord?.id) {
+    return { entityType: 'FILE_RECORD', entityId: log.fileRecordId ?? log.fileRecord?.id ?? null };
+  }
+  if (log.locationId || log.location?.id) {
+    return { entityType: 'LOCATION', entityId: log.locationId ?? log.location?.id ?? null };
+  }
+  if (log.warehouseId && log.action.toString().includes('WAREHOUSE')) {
+    return { entityType: 'WAREHOUSE', entityId: log.warehouseId };
+  }
+  if (log.branchId && log.action.toString().includes('BRANCH')) {
+    return { entityType: 'BRANCH', entityId: log.branchId };
+  }
+  if (log.deviceId && log.action.toString().includes('DEVICE')) {
+    return { entityType: 'DEVICE', entityId: log.deviceId };
+  }
+
+  // 2. Extract from newState or previousState JSON
+  const state: any =
+    (log.newState && typeof log.newState === 'object' ? log.newState : null) ??
+    (log.previousState && typeof log.previousState === 'object' ? log.previousState : null);
+
+  const candidateId =
+    state?.entityId ??
+    state?.id ??
+    state?.targetUserId ??
+    state?.boxId ??
+    state?.fileRecordId ??
+    state?.fileId ??
+    state?.locationId ??
+    state?.warehouseId ??
+    state?.branchId ??
+    state?.siteId ??
+    state?.roomId ??
+    state?.rackId ??
+    state?.shelfId ??
+    state?.clientId ??
+    state?.departmentId ??
+    state?.deviceId ??
+    state?.workOrderId ??
+    state?.templateId ??
+    null;
+
+  const actionStr = String(log.action);
+  let entityType = 'OTHER';
+
+  if (actionStr.includes('BOX')) entityType = 'BOX';
+  else if (actionStr.includes('FILE') || actionStr.includes('REFILE')) entityType = 'FILE_RECORD';
+  else if (actionStr.includes('LOCATION')) entityType = 'LOCATION';
+  else if (actionStr.includes('WAREHOUSE')) entityType = 'WAREHOUSE';
+  else if (actionStr.includes('BRANCH')) entityType = 'BRANCH';
+  else if (actionStr.includes('SITE')) entityType = 'SITE';
+  else if (actionStr.includes('ROOM')) entityType = 'ROOM';
+  else if (actionStr.includes('RACK_TEMPLATE')) entityType = 'RACK_TEMPLATE';
+  else if (actionStr.includes('RACK')) entityType = 'RACK';
+  else if (actionStr.includes('SHELF')) entityType = 'SHELF';
+  else if (actionStr.includes('CLIENT')) entityType = 'CLIENT';
+  else if (actionStr.includes('DEPARTMENT')) entityType = 'DEPARTMENT';
+  else if (actionStr.includes('USER') || actionStr.startsWith('AUTH_')) entityType = 'USER';
+  else if (actionStr.includes('DEVICE')) entityType = 'DEVICE';
+  else if (actionStr.includes('BARCODE')) entityType = 'BARCODE';
+  else if (actionStr.includes('WORK_ORDER')) entityType = 'WORK_ORDER';
+  else if (actionStr.includes('SERVICE_REQUEST')) entityType = 'SERVICE_REQUEST';
+  else if (actionStr.includes('TRANSFER')) entityType = 'TRANSFER';
+  else if (actionStr.includes('SEGREGATION')) entityType = 'SEGREGATION';
+  else if (actionStr.includes('MERGE')) entityType = 'MERGE';
+  else if (actionStr.includes('INVENTORY')) entityType = 'INVENTORY';
+
+  let finalEntityId = candidateId;
+  if (!finalEntityId && (actionStr.startsWith('AUTH_') || entityType === 'USER')) {
+    finalEntityId = state?.userId ?? null;
+  }
+
+  return {
+    entityType,
+    entityId: finalEntityId ? String(finalEntityId) : null
+  };
+}
+
+function mapDeviceOutput(log: {
+  deviceId?: string | null;
+  device?: { id: string; serialNumber: string; model: string; label?: string | null } | null;
+}) {
+  if (log.device) {
+    const name =
+      (log.device.label && log.device.label.trim().length > 0)
+        ? log.device.label
+        : (log.device.model && log.device.model.trim().length > 0)
+          ? log.device.model
+          : log.device.serialNumber;
+    return {
+      id: log.device.id,
+      name,
+      serialNumber: log.device.serialNumber,
+      model: log.device.model,
+      label: log.device.label ?? null
+    };
+  }
+  if (log.deviceId) {
+    return {
+      id: log.deviceId,
+      name: log.deviceId,
+      serialNumber: log.deviceId,
+      model: null,
+      label: null
+    };
+  }
+  return null;
 }
 
 export class AuditService {
+  static async recordAuditLog(params: RecordAuditLogParams) {
+    try {
+      const client = params.tx ?? prisma;
+
+      let finalNewState = params.newState ? JSON.parse(JSON.stringify(params.newState)) : null;
+      let finalPrevState = params.previousState ? JSON.parse(JSON.stringify(params.previousState)) : null;
+
+      if (params.entityId) {
+        if (finalNewState && typeof finalNewState === 'object' && !finalNewState.id && !finalNewState.entityId) {
+          finalNewState.id = params.entityId;
+        }
+        if (finalPrevState && typeof finalPrevState === 'object' && !finalPrevState.id && !finalPrevState.entityId) {
+          finalPrevState.id = params.entityId;
+        }
+      }
+
+      let resolvedDeviceId: string | null = null;
+      if (params.deviceId) {
+        const dev = await prisma.device.findFirst({
+          where: {
+            OR: [{ id: params.deviceId }, { serialNumber: params.deviceId }]
+          },
+          select: { id: true }
+        });
+        if (dev) {
+          resolvedDeviceId = dev.id;
+        }
+      }
+
+      await client.auditLog.create({
+        data: {
+          companyId: params.companyId,
+          userId: params.userId,
+          action: params.action,
+          deviceId: resolvedDeviceId,
+          warehouseId: params.warehouseId ?? undefined,
+          branchId: params.branchId ?? undefined,
+          locationId: params.locationId ?? undefined,
+          boxId: params.boxId ?? undefined,
+          fileRecordId: params.fileRecordId ?? undefined,
+          reasonCodeId: params.reasonCodeId ?? undefined,
+          gpsLat: params.gpsLat ?? undefined,
+          gpsLng: params.gpsLng ?? undefined,
+          previousState: finalPrevState as Prisma.InputJsonValue,
+          newState: finalNewState as Prisma.InputJsonValue
+        }
+      });
+    } catch (err) {
+      console.error('Failed to record audit log:', err);
+    }
+  }
+
   private static async resolveEntityFilter(
     companyId: string,
-    entityType?: AuditEntityType,
+    entityType?: AuditEntityType | string,
     entityId?: string
   ): Promise<Partial<Prisma.AuditLogWhereInput>> {
     if (!entityId) {
@@ -93,7 +297,7 @@ export class AuditService {
       return device ? { deviceId: device.id } : { deviceId: '__none__' };
     }
 
-    const [box, file, location] = await Promise.all([
+    const [box, file, location, user, device] = await Promise.all([
       prisma.box.findFirst({
         where: { companyId, OR: [{ id: entityId }, { barcode: entityId }] },
         select: { id: true }
@@ -108,15 +312,25 @@ export class AuditService {
           shelf: { rack: { room: { warehouse: { companyId } } } }
         },
         select: { id: true }
+      }),
+      prisma.user.findFirst({
+        where: { companyId, OR: [{ id: entityId }, { employeeCode: entityId }, { email: entityId }] },
+        select: { id: true }
+      }),
+      prisma.device.findFirst({
+        where: { companyId, OR: [{ id: entityId }, { serialNumber: entityId }] },
+        select: { id: true }
       })
     ]);
 
-    if (box || file || location) {
+    if (box || file || location || user || device) {
       return {
         OR: [
           ...(box ? [{ boxId: box.id }] : []),
           ...(file ? [{ fileRecordId: file.id }] : []),
-          ...(location ? [{ locationId: location.id }] : [])
+          ...(location ? [{ locationId: location.id }] : []),
+          ...(user ? [{ userId: user.id }] : []),
+          ...(device ? [{ deviceId: device.id }] : [])
         ]
       };
     }
@@ -132,7 +346,7 @@ export class AuditService {
       boxId?: string;
       fileRecordId?: string;
       action?: WorkflowAction;
-      entityType?: AuditEntityType;
+      entityType?: AuditEntityType | string;
       entityId?: string;
       from?: Date;
       to?: Date;
@@ -168,8 +382,8 @@ export class AuditService {
         where,
         include: {
           user: { select: { id: true, fullName: true, email: true } },
-          device: { select: { id: true, serialNumber: true, model: true } },
-          box: { select: { id: true, barcode: true } },
+          device: { select: { id: true, serialNumber: true, model: true, label: true } },
+          box: { select: { id: true, barcode: true, description: true } },
           fileRecord: { select: { id: true, barcode: true, title: true } },
           location: { select: { id: true, barcode: true, name: true } }
         },
@@ -181,23 +395,20 @@ export class AuditService {
     ]);
 
     return {
-      data: logs.map((log) => ({
-        id: log.id,
-        action: log.action,
-        entityType: log.boxId
-          ? 'BOX'
-          : log.fileRecordId
-            ? 'FILE_RECORD'
-            : log.locationId
-              ? 'LOCATION'
-              : 'OTHER',
-        entityId: auditEntityBarcode(log),
-        previousState: log.previousState,
-        newState: log.newState,
-        user: log.user,
-        device: log.device,
-        createdAt: log.createdAt
-      })),
+      data: logs.map((log) => {
+        const { entityType, entityId } = resolveEntityTypeAndId(log);
+        return {
+          id: log.id,
+          action: log.action,
+          entityType,
+          entityId,
+          previousState: log.previousState,
+          newState: log.newState,
+          user: log.user,
+          device: mapDeviceOutput(log),
+          createdAt: log.createdAt
+        };
+      }),
       meta: {
         page,
         limit: pageSize,
@@ -212,7 +423,7 @@ export class AuditService {
       where: { id: auditLogId, companyId },
       include: {
         user: { select: { id: true, fullName: true, email: true } },
-        device: { select: { id: true, serialNumber: true, model: true } },
+        device: { select: { id: true, serialNumber: true, model: true, label: true } },
         box: { select: { id: true, barcode: true, description: true } },
         fileRecord: { select: { id: true, barcode: true, title: true } },
         location: { select: { id: true, barcode: true, name: true } }
@@ -226,21 +437,17 @@ export class AuditService {
       throw error;
     }
 
+    const { entityType, entityId } = resolveEntityTypeAndId(log);
+
     return {
       id: log.id,
       action: log.action,
-      entityType: log.boxId
-        ? 'BOX'
-        : log.fileRecordId
-          ? 'FILE_RECORD'
-          : log.locationId
-            ? 'LOCATION'
-            : 'OTHER',
-      entityId: auditEntityBarcode(log),
+      entityType,
+      entityId,
       previousState: log.previousState,
       newState: log.newState,
       user: log.user,
-      device: log.device,
+      device: mapDeviceOutput(log),
       box: log.box,
       fileRecord: log.fileRecord,
       location: log.location,

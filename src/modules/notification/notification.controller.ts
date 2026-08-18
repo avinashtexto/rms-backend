@@ -40,8 +40,9 @@ export class NotificationController {
   static async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
+      const companyId = req.user!.companyId;
       const notificationId = req.params.notificationId as string;
-      const result = await NotificationService.markAsRead(userId, notificationId);
+      const result = await NotificationService.markAsRead(userId, companyId, notificationId);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -51,7 +52,8 @@ export class NotificationController {
   static async markAllAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
-      const result = await NotificationService.markAllAsRead(userId);
+      const companyId = req.user!.companyId;
+      const result = await NotificationService.markAllAsRead(userId, companyId);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -61,8 +63,9 @@ export class NotificationController {
   static async deleteNotification(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
+      const companyId = req.user!.companyId;
       const notificationId = req.params.notificationId as string;
-      const result = await NotificationService.deleteNotification(userId, notificationId);
+      const result = await NotificationService.deleteNotification(userId, companyId, notificationId);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);

@@ -1,6 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
+import { WorkflowAction } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 export class ClientService {
   // ==========================================
@@ -45,7 +47,8 @@ export class ClientService {
     name: string,
     code: string,
     contactEmail?: string | null,
-    contactPhone?: string | null
+    contactPhone?: string | null,
+    actor?: { id: string; deviceId?: string | null }
   ) {
     const existing = await prisma.client.findUnique({
       where: {
@@ -60,7 +63,7 @@ export class ClientService {
       throw error;
     }
 
-    return prisma.client.create({
+    const client = await prisma.client.create({
       data: {
         companyId,
         name,
@@ -69,6 +72,19 @@ export class ClientService {
         contactPhone
       }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.CLIENT_CREATED,
+        entityId: client.id,
+        deviceId: actor.deviceId,
+        newState: client
+      });
+    }
+
+    return client;
   }
 
   static async updateClient(
@@ -77,7 +93,8 @@ export class ClientService {
     name?: string,
     contactEmail?: string | null,
     contactPhone?: string | null,
-    isActive?: boolean
+    isActive?: boolean,
+    actor?: { id: string; deviceId?: string | null }
   ) {
     const client = await prisma.client.findFirst({
       where: { id: clientId, companyId }
@@ -90,7 +107,7 @@ export class ClientService {
       throw error;
     }
 
-    return prisma.client.update({
+    const updated = await prisma.client.update({
       where: { id: clientId },
       data: {
         name: name !== undefined ? name : client.name,
@@ -99,9 +116,23 @@ export class ClientService {
         isActive: isActive !== undefined ? isActive : client.isActive
       }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.CLIENT_UPDATED,
+        entityId: clientId,
+        deviceId: actor.deviceId,
+        previousState: client,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 
-  static async deleteClient(companyId: string, clientId: string) {
+  static async deleteClient(companyId: string, clientId: string, actor?: { id: string; deviceId?: string | null }) {
     const client = await prisma.client.findFirst({
       where: { id: clientId, companyId }
     });
@@ -113,9 +144,23 @@ export class ClientService {
       throw error;
     }
 
-    return prisma.client.delete({
+    const deleted = await prisma.client.delete({
       where: { id: clientId }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.CLIENT_DELETED,
+        entityId: clientId,
+        deviceId: actor.deviceId,
+        previousState: client,
+        newState: null
+      });
+    }
+
+    return deleted;
   }
 
   // ==========================================
@@ -140,7 +185,13 @@ export class ClientService {
     });
   }
 
-  static async createDepartment(companyId: string, clientId: string, name: string, code: string) {
+  static async createDepartment(
+    companyId: string,
+    clientId: string,
+    name: string,
+    code: string,
+    actor?: { id: string; deviceId?: string | null }
+  ) {
     const client = await prisma.client.findFirst({
       where: { id: clientId, companyId }
     });
@@ -165,16 +216,35 @@ export class ClientService {
       throw error;
     }
 
-    return prisma.department.create({
+    const dept = await prisma.department.create({
       data: {
         clientId,
         name,
         code
       }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEPARTMENT_CREATED,
+        entityId: dept.id,
+        deviceId: actor.deviceId,
+        newState: dept
+      });
+    }
+
+    return dept;
   }
 
-  static async updateDepartment(companyId: string, departmentId: string, name?: string, isActive?: boolean) {
+  static async updateDepartment(
+    companyId: string,
+    departmentId: string,
+    name?: string,
+    isActive?: boolean,
+    actor?: { id: string; deviceId?: string | null }
+  ) {
     const dept = await prisma.department.findFirst({
       where: { id: departmentId, client: { companyId } }
     });
@@ -186,16 +256,30 @@ export class ClientService {
       throw error;
     }
 
-    return prisma.department.update({
+    const updated = await prisma.department.update({
       where: { id: departmentId },
       data: {
         name: name !== undefined ? name : dept.name,
         isActive: isActive !== undefined ? isActive : dept.isActive
       }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEPARTMENT_UPDATED,
+        entityId: departmentId,
+        deviceId: actor.deviceId,
+        previousState: dept,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 
-  static async deleteDepartment(companyId: string, departmentId: string) {
+  static async deleteDepartment(companyId: string, departmentId: string, actor?: { id: string; deviceId?: string | null }) {
     const dept = await prisma.department.findFirst({
       where: { id: departmentId, client: { companyId } }
     });
@@ -207,8 +291,22 @@ export class ClientService {
       throw error;
     }
 
-    return prisma.department.delete({
+    const deleted = await prisma.department.delete({
       where: { id: departmentId }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEPARTMENT_DELETED,
+        entityId: departmentId,
+        deviceId: actor.deviceId,
+        previousState: dept,
+        newState: null
+      });
+    }
+
+    return deleted;
   }
 }

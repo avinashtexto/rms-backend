@@ -15,6 +15,16 @@ const NOTIFICATION_PRIORITY: Record<string, string> = {
   GPS_DISABLED: 'MEDIUM'
 };
 
+const NOTIFICATION_ACTION_URL: Record<string, string> = {
+  DUPLICATE_SCAN: '/audit-logs',
+  WRONG_LOCATION: '/locations',
+  WRONG_BOX: '/boxes',
+  INVENTORY_PENDING: '/workflows/inventory-verification',
+  SYNC_FAILED: '/sync',
+  LOW_BATTERY: '/devices',
+  GPS_DISABLED: '/gps'
+};
+
 function decorateNotification(n: {
   id: string;
   type: string;
@@ -31,7 +41,7 @@ function decorateNotification(n: {
     isRead: n.isRead,
     priority: NOTIFICATION_PRIORITY[n.type] ?? 'MEDIUM',
     createdAt: n.createdAt,
-    actionUrl: null as string | null
+    actionUrl: NOTIFICATION_ACTION_URL[n.type] ?? null
   };
 }
 
@@ -59,7 +69,7 @@ export class NotificationService {
 
     // Otherwise broadcast to all active users in the company
     const users = await prisma.user.findMany({
-      where: { companyId: data.companyId, isActive: true },
+      where: { companyId: data.companyId, status: 'ACTIVE' },
       select: { id: true }
     });
 
@@ -145,9 +155,16 @@ export class NotificationService {
     };
   }
 
-  static async markAsRead(userId: string, notificationId: string) {
+  static async markAsRead(userId: string, companyId: string, notificationId: string) {
     const notif = await prisma.notification.findFirst({
-      where: { id: notificationId, userId }
+      where: {
+        id: notificationId,
+        companyId,
+        OR: [
+          { userId },
+          { companyId }
+        ]
+      }
     });
 
     if (!notif) {
@@ -157,22 +174,30 @@ export class NotificationService {
       throw error;
     }
 
-    return prisma.notification.update({
+    const updated = await prisma.notification.update({
       where: { id: notificationId },
       data: { isRead: true }
     });
+
+    return decorateNotification(updated);
   }
 
-  static async markAllAsRead(userId: string) {
+  static async markAllAsRead(userId: string, companyId: string) {
     return prisma.notification.updateMany({
-      where: { userId, isRead: false },
+      where: {
+        companyId,
+        isRead: false
+      },
       data: { isRead: true }
     });
   }
 
-  static async deleteNotification(userId: string, notificationId: string) {
+  static async deleteNotification(userId: string, companyId: string, notificationId: string) {
     const notif = await prisma.notification.findFirst({
-      where: { id: notificationId, userId }
+      where: {
+        id: notificationId,
+        companyId
+      }
     });
 
     if (!notif) {

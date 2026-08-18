@@ -12,11 +12,12 @@ export class SiteService {
     });
   }
 
-  static async listSites(companyId: string, page: number = 1, pageSize: number = 20) {
+  static async listSites(companyId?: string, page: number = 1, pageSize: number = 20) {
     const skip = (page - 1) * pageSize;
+    const where = companyId ? { companyId } : {};
     const [sites, total] = await Promise.all([
       prisma.site.findMany({
-        where: { companyId },
+        where,
         include: {
           branch: true
         },
@@ -24,7 +25,7 @@ export class SiteService {
         skip,
         take: pageSize
       }),
-      prisma.site.count({ where: { companyId } })
+      prisma.site.count({ where })
     ]);
 
     return {

@@ -108,13 +108,16 @@ export const requireAuth = async (
       }
     }
 
+    const deviceHeader = (decoded.deviceId ?? req.headers['x-device-id'] ?? req.headers['x-device-uuid'] ?? null) as string | null;
+
     req.user = {
       id: user.id,
       companyId: tokenCompanyId,
       roleId: user.roleId,
       roleName: user.role.name,
       branchId: decoded.branchId ?? null,
-      warehouseId: decoded.warehouseId ?? null
+      warehouseId: decoded.warehouseId ?? null,
+      deviceId: deviceHeader
     };
 
     next();

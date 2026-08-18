@@ -31,7 +31,7 @@ export class DeviceController {
     try {
       const companyId = req.user!.companyId;
       const data = registerDeviceSchema.parse(req.body);
-      const device = await DeviceService.registerDevice(companyId, data.serialNumber, data.model);
+      const device = await DeviceService.registerDevice(companyId, data.serialNumber, data.model, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(201).json({ success: true, data: device });
     } catch (error) {
       next(error);
@@ -42,7 +42,7 @@ export class DeviceController {
     try {
       const companyId = req.user!.companyId;
       const deviceId = req.params.deviceId as string;
-      const device = await DeviceService.approveDevice(companyId, deviceId);
+      const device = await DeviceService.approveDevice(companyId, deviceId, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({ success: true, data: device });
     } catch (error) {
       next(error);
@@ -54,19 +54,18 @@ export class DeviceController {
       const companyId = req.user!.companyId;
       const deviceId = req.params.deviceId as string;
       const data = updateDeviceStatusSchema.parse(req.body);
-      const device = await DeviceService.updateDeviceStatus(companyId, deviceId, data.status);
+      const device = await DeviceService.updateDeviceStatus(companyId, deviceId, data.status, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({ success: true, data: device });
     } catch (error) {
       next(error);
     }
   }
 
-
   static async deleteDevice(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
       const deviceId = req.params.deviceId as string;
-      await DeviceService.deleteDevice(companyId, deviceId);
+      await DeviceService.deleteDevice(companyId, deviceId, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({
         success: true,
         message: 'Device deleted successfully'
@@ -80,7 +79,7 @@ export class DeviceController {
       const companyId = req.user!.companyId;
       const deviceId = req.params.deviceId as string;
       const data = assignDeviceSchema.parse(req.body);
-      const device = await DeviceService.assignDevice(companyId, deviceId, data.assignedUserId);
+      const device = await DeviceService.assignDevice(companyId, deviceId, data.assignedUserId, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({ success: true, data: device });
     } catch (error) {
       next(error);
@@ -92,7 +91,7 @@ export class DeviceController {
       const companyId = req.user!.companyId;
       const deviceId = req.params.deviceId as string;
       const data = updateDeviceSchema.parse(req.body);
-      const device = await DeviceService.updateDevice(companyId, deviceId, data);
+      const device = await DeviceService.updateDevice(companyId, deviceId, data, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({ success: true, data: device });
     } catch (error) {
       next(error);

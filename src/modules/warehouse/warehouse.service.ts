@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
-import { RoleName, UserStatus } from '@prisma/client';
+import { RoleName, UserStatus, WorkflowAction } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
+import { AuditService } from '../audit/audit.service';
 
 export class WarehouseService {
   static async listWarehouses(
@@ -84,7 +85,8 @@ export class WarehouseService {
       email: string;
       password: string;
       phone?: string;
-    }
+    },
+    actor?: { id: string; deviceId?: string | null }
   ) {
     // Multi-tenant check: verify site belongs to the tenant company (via branch relation)
     const site = await prisma.site.findFirst({
@@ -210,6 +212,17 @@ export class WarehouseService {
         };
       }
 
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor?.id ?? companyId,
+        action: WorkflowAction.WAREHOUSE_CREATED,
+        warehouseId: warehouse.id,
+        entityId: warehouse.id,
+        deviceId: actor?.deviceId,
+        newState: warehouse,
+        tx
+      });
+
       return {
         ...warehouse,
         admin: adminUser
@@ -229,7 +242,8 @@ export class WarehouseService {
     country?: string,
     zipCode?: number,
     phone?: string,
-    isActive?: boolean
+    isActive?: boolean,
+    actor?: { id: string; deviceId?: string | null }
   ) {
     const warehouse = await prisma.warehouse.findFirst({
       where: { id: warehouseId, companyId }
@@ -311,13 +325,28 @@ export class WarehouseService {
       }
     }
 
-    return prisma.warehouse.update({
+    const updated = await prisma.warehouse.update({
       where: { id: warehouseId },
       data
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.WAREHOUSE_UPDATED,
+        warehouseId,
+        entityId: warehouseId,
+        deviceId: actor.deviceId,
+        previousState: warehouse,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 
-  static async deleteWarehouse(companyId: string, warehouseId: string) {
+  static async deleteWarehouse(companyId: string, warehouseId: string, actor?: { id: string; deviceId?: string | null }) {
     const warehouse = await prisma.warehouse.findFirst({
       where: { id: warehouseId, companyId }
     });
@@ -329,8 +358,23 @@ export class WarehouseService {
       throw error;
     }
 
-    return prisma.warehouse.delete({
+    const deleted = await prisma.warehouse.delete({
       where: { id: warehouseId }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.WAREHOUSE_DELETED,
+        warehouseId,
+        entityId: warehouseId,
+        deviceId: actor.deviceId,
+        previousState: warehouse,
+        newState: null
+      });
+    }
+
+    return deleted;
   }
 }

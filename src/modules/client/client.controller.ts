@@ -40,7 +40,8 @@ export class ClientController {
         data.name,
         data.code,
         data.contactEmail,
-        data.contactPhone
+        data.contactPhone,
+        { id: req.user!.id, deviceId: req.user?.deviceId }
       );
       res.status(201).json({ success: true, data: client });
     } catch (error) {
@@ -59,7 +60,8 @@ export class ClientController {
         data.name,
         data.contactEmail,
         data.contactPhone,
-        data.isActive
+        data.isActive,
+        { id: req.user!.id, deviceId: req.user?.deviceId }
       );
       res.status(200).json({ success: true, data: client });
     } catch (error) {
@@ -91,7 +93,8 @@ export class ClientController {
         companyId,
         clientId,
         data.name,
-        data.code
+        data.code,
+        { id: req.user!.id, deviceId: req.user?.deviceId }
       );
       res.status(201).json({ success: true, data: department });
     } catch (error) {
@@ -108,7 +111,8 @@ export class ClientController {
         companyId,
         departmentId,
         data.name,
-        data.isActive
+        data.isActive,
+        { id: req.user!.id, deviceId: req.user?.deviceId }
       );
       res.status(200).json({ success: true, data: department });
     } catch (error) {
@@ -120,7 +124,7 @@ export class ClientController {
     try {
       const companyId = req.user!.companyId;
       const clientId = req.params.id as string;
-      await ClientService.deleteClient(companyId, clientId);
+      await ClientService.deleteClient(companyId, clientId, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({
         success: true,
         message: 'Client deleted successfully'
@@ -134,7 +138,7 @@ export class ClientController {
     try {
       const companyId = req.user!.companyId;
       const departmentId = req.params.id as string;
-      await ClientService.deleteDepartment(companyId, departmentId);
+      await ClientService.deleteDepartment(companyId, departmentId, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({
         success: true,
         message: 'Department deleted successfully'

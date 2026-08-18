@@ -1,7 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { ErrorCode } from '../../lib/error-codes';
 import { AppError } from '../../middleware/error.middleware';
-import { DeviceStatus } from '@prisma/client';
+import { DeviceStatus, WorkflowAction } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 export class DeviceService {
   static async listDevices(companyId: string, page: number = 1, pageSize: number = 20) {
@@ -32,7 +33,7 @@ export class DeviceService {
     };
   }
 
-  static async registerDevice(companyId: string, serialNumber: string, model: string) {
+  static async registerDevice(companyId: string, serialNumber: string, model: string, actor?: { id: string; deviceId?: string | null }) {
     const existing = await prisma.device.findUnique({
       where: { serialNumber }
     });
@@ -44,7 +45,7 @@ export class DeviceService {
       throw error;
     }
 
-    return prisma.device.create({
+    const device = await prisma.device.create({
       data: {
         companyId,
         serialNumber,
@@ -52,9 +53,22 @@ export class DeviceService {
         status: 'PENDING'
       }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEVICE_CREATED,
+        deviceId: device.id,
+        entityId: device.id,
+        newState: device
+      });
+    }
+
+    return device;
   }
 
-  static async approveDevice(companyId: string, deviceId: string) {
+  static async approveDevice(companyId: string, deviceId: string, actor?: { id: string; deviceId?: string | null }) {
     const device = await prisma.device.findFirst({
       where: { id: deviceId, companyId }
     });
@@ -66,13 +80,27 @@ export class DeviceService {
       throw error;
     }
 
-    return prisma.device.update({
+    const updated = await prisma.device.update({
       where: { id: deviceId },
       data: { status: 'APPROVED' }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEVICE_UPDATED,
+        deviceId: device.id,
+        entityId: device.id,
+        previousState: device,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 
-  static async updateDeviceStatus(companyId: string, deviceId: string, status: DeviceStatus) {
+  static async updateDeviceStatus(companyId: string, deviceId: string, status: DeviceStatus, actor?: { id: string; deviceId?: string | null }) {
     const device = await prisma.device.findFirst({
       where: { id: deviceId, companyId }
     });
@@ -84,13 +112,27 @@ export class DeviceService {
       throw error;
     }
 
-    return prisma.device.update({
+    const updated = await prisma.device.update({
       where: { id: deviceId },
       data: { status }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEVICE_UPDATED,
+        deviceId: device.id,
+        entityId: device.id,
+        previousState: device,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 
-  static async assignDevice(companyId: string, deviceId: string, assignedUserId?: string | null) {
+  static async assignDevice(companyId: string, deviceId: string, assignedUserId?: string | null, actor?: { id: string; deviceId?: string | null }) {
     const device = await prisma.device.findFirst({
       where: { id: deviceId, companyId }
     });
@@ -115,10 +157,24 @@ export class DeviceService {
       }
     }
 
-    return prisma.device.update({
+    const updated = await prisma.device.update({
       where: { id: deviceId },
       data: { assignedUserId }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEVICE_UPDATED,
+        deviceId: device.id,
+        entityId: device.id,
+        previousState: device,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 
   static async getDeviceById(companyId: string, deviceId: string) {
@@ -146,7 +202,7 @@ export class DeviceService {
     return device;
   }
 
-  static async deleteDevice(companyId: string, deviceId: string) {
+  static async deleteDevice(companyId: string, deviceId: string, actor?: { id: string; deviceId?: string | null }) {
     const device = await prisma.device.findFirst({
       where: { id: deviceId, companyId }
     });
@@ -158,12 +214,31 @@ export class DeviceService {
       throw error;
     }
 
-    return prisma.device.delete({
+    const deleted = await prisma.device.delete({
       where: { id: deviceId }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEVICE_DELETED,
+        deviceId: device.id,
+        entityId: device.id,
+        previousState: device,
+        newState: null
+      });
+    }
+
+    return deleted;
   }
 
-  static async updateDevice(companyId: string, deviceId: string, data: { serialNumber?: string; model?: string; status?: DeviceStatus; assignedUserId?: string | null }) {
+  static async updateDevice(
+    companyId: string,
+    deviceId: string,
+    data: { serialNumber?: string; model?: string; status?: DeviceStatus; assignedUserId?: string | null },
+    actor?: { id: string; deviceId?: string | null }
+  ) {
     const device = await prisma.device.findFirst({
       where: { id: deviceId, companyId }
     });
@@ -199,7 +274,7 @@ export class DeviceService {
       }
     }
 
-    return prisma.device.update({
+    const updated = await prisma.device.update({
       where: { id: deviceId },
       data: {
         serialNumber: data.serialNumber,
@@ -208,5 +283,19 @@ export class DeviceService {
         assignedUserId: data.assignedUserId
       }
     });
+
+    if (actor) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId: actor.id,
+        action: WorkflowAction.DEVICE_UPDATED,
+        deviceId: device.id,
+        entityId: device.id,
+        previousState: device,
+        newState: updated
+      });
+    }
+
+    return updated;
   }
 }

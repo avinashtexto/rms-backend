@@ -7,8 +7,8 @@ import { BranchRepository } from './branch.repository';
 export class BranchController {
   static async listBranches(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const companyId = req.user!.companyId;
-      const userId = req.user!.id;
+      const isSuperAdmin = req.user?.roleName === 'SUPER_ADMIN';
+      const companyId = isSuperAdmin ? ((req.query.companyId as string) || undefined) : req.user!.companyId;
       const query = listBranchesQuerySchema.parse(req.query);
       
       const result = await BranchService.listBranches({

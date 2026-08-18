@@ -16,7 +16,8 @@ export class SiteController {
 
   static async listSites(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const companyId = req.user!.companyId;
+      const isSuperAdmin = req.user?.roleName === 'SUPER_ADMIN';
+      const companyId = isSuperAdmin ? ((req.query.companyId as string) || undefined) : req.user!.companyId;
       const query = listSitesQuerySchema.parse(req.query);
       const result = await SiteService.listSites(companyId, query.page, query.pageSize);
       res.status(200).json({

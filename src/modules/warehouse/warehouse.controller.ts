@@ -63,7 +63,8 @@ export class WarehouseController {
         data.zipCode,
         data.phone,
         data.isActive,
-        data.admin
+        data.admin,
+        { id: req.user!.id, deviceId: req.user?.deviceId }
       );
       res.status(201).json({
         success: true,
@@ -91,7 +92,8 @@ export class WarehouseController {
         data.country,
         data.zipCode,
         data.phone,
-        data.isActive
+        data.isActive,
+        { id: req.user!.id, deviceId: req.user?.deviceId }
       );
       res.status(200).json({
         success: true,
@@ -106,7 +108,7 @@ export class WarehouseController {
     try {
       const companyId = req.user!.companyId;
       const warehouseId = req.params.id as string;
-      await WarehouseService.deleteWarehouse(companyId, warehouseId);
+      await WarehouseService.deleteWarehouse(companyId, warehouseId, { id: req.user!.id, deviceId: req.user?.deviceId });
       res.status(200).json({
         success: true,
         message: 'Warehouse deleted successfully'

@@ -32,6 +32,7 @@ interface TokenPayload {
   roleId: string;
   branchId?: string | null;
   warehouseId?: string | null;
+  deviceId?: string | null;
   jti: string;
 }
 
@@ -44,13 +45,14 @@ export class AuthService {
     );
   }
 
-  private static signRefreshToken(userId: string, session: SessionContext) {
+  private static signRefreshToken(userId: string, session: SessionContext, deviceId?: string | null) {
     return jwt.sign(
       {
         userId,
         companyId: session.companyId,
         branchId: session.branchId,
         warehouseId: session.warehouseId,
+        deviceId: deviceId ?? null,
         jti: crypto.randomUUID()
       },
       JWT_SECRET,
@@ -72,7 +74,8 @@ export class AuthService {
     previousState?: unknown,
     newState?: unknown,
     warehouseId?: string | null,
-    branchId?: string | null
+    branchId?: string | null,
+    deviceId?: string | null
   ) {
     try {
       await prisma.auditLog.create({
@@ -80,10 +83,11 @@ export class AuthService {
           companyId,
           userId,
           action,
+          deviceId: deviceId ?? undefined,
           warehouseId: warehouseId ?? undefined,
           branchId: branchId ?? undefined,
-          previousState: previousState as Prisma.InputJsonValue,
-          newState: newState as Prisma.InputJsonValue
+          previousState: (previousState ? JSON.parse(JSON.stringify(previousState)) : null) as Prisma.InputJsonValue,
+          newState: (newState ? JSON.parse(JSON.stringify(newState)) : { id: userId }) as Prisma.InputJsonValue
         }
       });
     } catch (err) {
@@ -94,7 +98,7 @@ export class AuthService {
   private static async buildSessionResponse(
     userId: string,
     session: SessionContext,
-    options?: { skipAudit?: boolean; auditAction?: WorkflowAction }
+    options?: { skipAudit?: boolean; auditAction?: WorkflowAction; deviceId?: string | null }
   ) {
     const user = await loadUserForSession(userId);
     if (!user || user.status !== 'ACTIVE') {
@@ -144,10 +148,11 @@ export class AuthService {
       companyId: session.companyId,
       roleId: user.roleId,
       branchId: session.branchId,
-      warehouseId: session.warehouseId
+      warehouseId: session.warehouseId,
+      deviceId: options?.deviceId ?? null
     });
 
-    const refreshToken = AuthService.signRefreshToken(user.id, session);
+    const refreshToken = AuthService.signRefreshToken(user.id, session, options?.deviceId);
     const expiresAt = AuthService.getAccessTokenExpiry();
 
     const tokenHash = cryptoTokenHash(refreshToken);
@@ -164,6 +169,28 @@ export class AuthService {
       code: w.code,
       name: w.name
     }));
+
+    if (!options?.skipAudit) {
+      await AuthService.writeAuthAudit(
+        user.id,
+        session.companyId,
+        options?.auditAction ?? WorkflowAction.AUTH_LOGIN,
+        null,
+        {
+          id: user.id,
+          userId: user.id,
+          employeeCode: user.employeeCode,
+          email: user.email,
+          role: user.role.name,
+          warehouseId: session.warehouseId ?? null,
+          branchId: session.branchId ?? null,
+          deviceId: options?.deviceId ?? null
+        },
+        session.warehouseId,
+        session.branchId,
+        options?.deviceId
+      );
+    }
 
     const response = {
       accessToken,
@@ -298,7 +325,8 @@ export class AuthService {
 
     const session = await resolveSessionContext(fullUser);
     const result = await AuthService.buildSessionResponse(user.id, session, {
-      auditAction: WorkflowAction.AUTH_LOGIN
+      auditAction: WorkflowAction.AUTH_LOGIN,
+      deviceId
     });
 
     return {

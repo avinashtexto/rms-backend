@@ -30,9 +30,43 @@ function shortCode(prefix: string): string {
 // REFILE  (/refiles/*)
 // ============================================================
 
-router.get('/refiles/assigned', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/refiles/assigned', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: [] });
+    const companyId = req.user!.companyId;
+    const userId = req.user!.id;
+
+    const events = await prisma.refileEvent.findMany({
+      where: {
+        operatorId: userId,
+        fileRecord: { companyId }
+      },
+      include: {
+        fileRecord: {
+          include: {
+            box: { include: { currentLocation: true } }
+          }
+        }
+      },
+      orderBy: { scannedAt: 'desc' },
+      take: 20
+    });
+
+    const data = events.map((e) => ({
+      id: e.id,
+      refileCode: `RF-${e.id.substring(0, 8).toUpperCase()}`,
+      fileBarcode: e.fileRecord.barcode,
+      fileName: e.fileRecord.title ?? null,
+      currentLocation: e.fileRecord.box?.currentLocation?.name ?? 'Unknown',
+      newLocation: '',
+      status: e.action === 'REFILE_SUCCESS' ? 'COMPLETED' : 'PENDING',
+      reason: null,
+      assignedTo: e.operatorId,
+      startedAt: e.scannedAt.toISOString(),
+      completedAt: e.scannedAt.toISOString(),
+      createdAt: e.scannedAt.toISOString()
+    }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -49,9 +83,9 @@ router.post('/refiles/start', async (req: AuthenticatedRequest, res: Response, n
       include: { box: { include: { currentLocation: true } } }
     });
 
-    const now = new Date();
+    const now = new Date().toISOString();
     const refile = {
-      id: randomUUID(),
+      id: file?.id ?? randomUUID(),
       refileCode: shortCode('RF'),
       fileBarcode: fileBarcode ?? '',
       fileName: file?.title ?? null,
@@ -61,7 +95,7 @@ router.post('/refiles/start', async (req: AuthenticatedRequest, res: Response, n
       reason: reason ?? null,
       assignedTo: userId,
       startedAt: now,
-      completedAt: null as Date | null,
+      completedAt: null as string | null,
       createdAt: now
     };
 
@@ -108,9 +142,43 @@ router.put('/refiles/:id/complete', async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-router.get('/refiles/scan/:barcode', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/refiles/scan/:barcode', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: null });
+    const companyId = req.user!.companyId;
+    const barcode = req.params.barcode as string;
+
+    const file = await prisma.fileRecord.findFirst({
+      where: { companyId, barcode },
+      include: {
+        box: {
+          include: {
+            currentLocation: true
+          }
+        }
+      }
+    });
+
+    if (!file) {
+      return res.status(200).json({ success: true, data: null });
+    }
+
+    const now = new Date().toISOString();
+    const refile = {
+      id: file.id,
+      refileCode: shortCode('RF'),
+      fileBarcode: file.barcode,
+      fileName: file.title ?? null,
+      currentLocation: file.box?.currentLocation?.name ?? 'Unassigned',
+      newLocation: '',
+      status: 'SCANNED',
+      reason: null,
+      assignedTo: req.user!.id,
+      startedAt: now,
+      completedAt: null as string | null,
+      createdAt: file.createdAt.toISOString()
+    };
+
+    res.status(200).json({ success: true, data: refile });
   } catch (error) {
     next(error);
   }
@@ -120,9 +188,45 @@ router.get('/refiles/scan/:barcode', async (_req: AuthenticatedRequest, res: Res
 // MERGE  (/merges/*)
 // ============================================================
 
-router.get('/merges/assigned', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/merges/assigned', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: [] });
+    const userId = req.user!.id;
+
+    const sessions = await prisma.mergeSession.findMany({
+      where: {
+        operatorId: userId
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+
+    const boxIds = [...new Set(sessions.flatMap((s) => [s.fromBoxId, s.toBoxId]))];
+    const boxes = await prisma.box.findMany({
+      where: { id: { in: boxIds } }
+    });
+    const boxMap = new Map(boxes.map((b) => [b.id, b]));
+
+    const data = sessions.map((s) => {
+      const fromBox = boxMap.get(s.fromBoxId);
+      const toBox = boxMap.get(s.toBoxId);
+      return {
+        id: s.id,
+        mergeCode: `MG-${s.id.substring(0, 8).toUpperCase()}`,
+        sourceBoxBarcode: fromBox?.barcode ?? s.fromBoxId,
+        sourceBoxName: fromBox?.description ?? null,
+        destinationBoxBarcode: toBox?.barcode ?? s.toBoxId,
+        destinationBoxName: toBox?.description ?? null,
+        status: 'COMPLETED',
+        reason: null,
+        fileCount: s.fileCountMoved,
+        assignedTo: s.operatorId,
+        startedAt: s.createdAt.toISOString(),
+        completedAt: s.createdAt.toISOString(),
+        createdAt: s.createdAt.toISOString()
+      };
+    });
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -243,9 +347,39 @@ router.get('/merges/scan/:barcode', async (req: AuthenticatedRequest, res: Respo
 // SEGREGATION  (/segregations/*)
 // ============================================================
 
-router.get('/segregations/assigned', async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/segregations/assigned', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    res.status(200).json({ success: true, data: [] });
+    const userId = req.user!.id;
+
+    const sessions = await prisma.segregationSession.findMany({
+      where: {
+        operatorId: userId
+      },
+      include: {
+        oldBox: true,
+        newBox: true,
+        movedFiles: true
+      },
+      orderBy: { startedAt: 'desc' },
+      take: 20
+    });
+
+    const data = sessions.map((s) => ({
+      id: s.id,
+      segregationCode: `SG-${s.id.substring(0, 8).toUpperCase()}`,
+      boxBarcode: s.oldBox?.barcode ?? s.oldBoxId,
+      boxName: s.oldBox?.description ?? null,
+      status: s.endedAt ? 'COMPLETED' : 'IN_PROGRESS',
+      reasonCode: null,
+      reason: null,
+      fileCount: s.movedFiles.length,
+      assignedTo: s.operatorId,
+      startedAt: s.startedAt.toISOString(),
+      completedAt: s.endedAt ? s.endedAt.toISOString() : null,
+      createdAt: s.startedAt.toISOString()
+    }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -260,9 +394,9 @@ router.post('/segregations/start', async (req: AuthenticatedRequest, res: Respon
     const box = await prisma.box.findFirst({ where: { companyId, barcode: boxBarcode } });
     const fileCount = box ? await prisma.fileRecord.count({ where: { boxId: box.id } }) : 0;
 
-    const now = new Date();
+    const now = new Date().toISOString();
     const segregation = {
-      id: randomUUID(),
+      id: box?.id ?? randomUUID(),
       segregationCode: shortCode('SG'),
       boxBarcode: boxBarcode ?? '',
       boxName: box?.description ?? null,
@@ -272,7 +406,7 @@ router.post('/segregations/start', async (req: AuthenticatedRequest, res: Respon
       fileCount,
       assignedTo: userId,
       startedAt: now,
-      completedAt: null as Date | null,
+      completedAt: null as string | null,
       createdAt: now
     };
 
@@ -346,9 +480,9 @@ router.get('/segregations/scan/:barcode', async (req: AuthenticatedRequest, res:
     }
 
     const fileCount = await prisma.fileRecord.count({ where: { boxId: box.id } });
-    const now = new Date();
+    const now = new Date().toISOString();
     const segregation = {
-      id: randomUUID(),
+      id: box.id,
       segregationCode: shortCode('SG'),
       boxBarcode: box.barcode,
       boxName: box.description ?? null,
@@ -358,7 +492,7 @@ router.get('/segregations/scan/:barcode', async (req: AuthenticatedRequest, res:
       fileCount,
       assignedTo: req.user!.id,
       startedAt: now,
-      completedAt: null as Date | null,
+      completedAt: null as string | null,
       createdAt: now
     };
 
