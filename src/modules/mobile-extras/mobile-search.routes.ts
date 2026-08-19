@@ -131,8 +131,8 @@ router.get('/search/barcode', async (req: AuthenticatedRequest, res: Response, n
   }
 });
 
-// GET /search/boxes/:id -> BoxDetailDto
-router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// GET /search/boxes/:id and /boxes/:id -> BoxDetailDto
+router.get(['/search/boxes/:id', '/boxes/:id'], async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const companyId = req.user!.companyId;
     const boxId = String(req.params.id);
@@ -152,7 +152,11 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
                   include: {
                     room: {
                       include: {
-                        warehouse: true
+                        warehouse: {
+                          include: {
+                            site: true
+                          }
+                        }
                       }
                     }
                   }
@@ -173,7 +177,7 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
           OR: [{ id: boxId }, { barcode: boxId }],
           type: 'BOX'
         },
-        include: { warehouse: true, site: true, branch: true }
+        include: { warehouse: { include: { site: true } }, site: true, branch: true }
       });
 
       if (barcodeMaster) {
@@ -184,7 +188,23 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
               client: true,
               currentLocation: {
                 include: {
-                  shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
+                  shelf: {
+                    include: {
+                      rack: {
+                        include: {
+                          room: {
+                            include: {
+                              warehouse: {
+                                include: {
+                                  site: true
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               },
               fileRecords: true
@@ -199,6 +219,9 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
               id: barcodeMaster.id,
               barcode: barcodeMaster.barcode,
               name: barcodeMaster.remarks || `Box Barcode ${barcodeMaster.barcode}`,
+              boxType: 'STANDARD',
+              warehouse: barcodeMaster.warehouse?.name ?? 'Unassigned',
+              site: barcodeMaster.site?.name ?? barcodeMaster.warehouse?.site?.name ?? 'Unassigned',
               location: barcodeMaster.warehouse?.name ?? 'Unassigned',
               status: barcodeMaster.status,
               fileCount: 0,
@@ -218,9 +241,17 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
 
     const loc = box.currentLocation;
     let locationStr = 'Unassigned';
+    let warehouseName = 'Unassigned';
+    let siteName = 'Unassigned';
+
     if (loc) {
+      const wh = loc.shelf?.rack?.room?.warehouse;
+      if (wh) {
+        warehouseName = wh.name;
+        if (wh.site) siteName = wh.site.name;
+      }
       const parts = [
-        loc.shelf?.rack?.room?.warehouse?.name,
+        wh?.name,
         loc.shelf?.rack?.room?.name,
         loc.shelf?.rack?.name,
         loc.shelf?.name,
@@ -233,6 +264,9 @@ router.get('/search/boxes/:id', async (req: AuthenticatedRequest, res: Response,
       id: box.id,
       barcode: box.barcode,
       name: box.description ?? null,
+      boxType: 'STANDARD',
+      warehouse: warehouseName,
+      site: siteName,
       location: locationStr,
       status: box.status,
       fileCount: box.fileRecords?.length ?? 0,
@@ -287,7 +321,6 @@ router.get('/search/files/:id', async (req: AuthenticatedRequest, res: Response,
             }
           }
         },
-        fileType: true,
         refileEvents: {
           take: 10,
           orderBy: { scannedAt: 'desc' }
@@ -339,8 +372,8 @@ router.get('/search/files/:id', async (req: AuthenticatedRequest, res: Response,
   }
 });
 
-// POST /search/boxes/:id/files -> insert file into box
-router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// POST /search/boxes/:id/files and /boxes/:id/files -> insert file into box
+router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const companyId = req.user!.companyId;
     const userId = req.user!.id;
@@ -353,8 +386,8 @@ router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Re
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'File barcode is required' } });
     }
 
-    // Resolve target Box
-    let box = await prisma.box.findFirst({
+    // Resolve target Box by ID or barcode
+    const box = await prisma.box.findFirst({
       where: {
         companyId,
         OR: [{ id: boxId }, { barcode: boxId }]
@@ -369,50 +402,14 @@ router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Re
     });
 
     if (!box) {
-      // Check if boxId was a BarcodeMaster entry and create Box record on the fly if needed
-      const barcodeMaster = await prisma.barcodeMaster.findFirst({
-        where: {
-          companyId,
-          OR: [{ id: boxId }, { barcode: boxId }],
-          type: 'BOX'
-        }
-      });
-      if (barcodeMaster) {
-        const fallbackClient = await prisma.client.findFirst({ where: { companyId } });
-        if (fallbackClient) {
-          box = await prisma.box.create({
-            data: {
-              companyId,
-              clientId: fallbackClient.id,
-              barcode: barcodeMaster.barcode,
-              description: barcodeMaster.remarks || `Box ${barcodeMaster.barcode}`,
-              capacity: 25
-            },
-            include: {
-              currentLocation: {
-                include: {
-                  shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
-                }
-              }
-            }
-          });
-
-          await prisma.barcodeMaster.update({
-            where: { id: barcodeMaster.id },
-            data: {
-              isAssigned: true,
-              status: 'ASSIGNED',
-              assignedToType: 'BOX',
-              assignedToId: box.id,
-              assignedAt: new Date()
-            }
-          });
-        }
-      }
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Box not found' } });
     }
 
-    if (!box) {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Box not found' } });
+    if (box.status !== 'ACTIVE') {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'BOX_INACTIVE', message: `Box is in ${box.status} state and cannot accept new files.` }
+      });
     }
 
     // Check if file already exists in database
@@ -424,12 +421,12 @@ router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Re
     if (file) {
       if (file.boxId) {
         if (file.boxId === box.id) {
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
             error: { code: 'DUPLICATE', message: `File '${cleanFileBarcode}' is already assigned to this Box (${box.barcode}).` }
           });
         } else {
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
             error: { code: 'ALREADY_ASSIGNED', message: `File '${cleanFileBarcode}' is already assigned to Box '${file.box?.barcode || file.boxId}'.` }
           });
@@ -456,7 +453,7 @@ router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Re
         locationId: box.currentLocationId,
         warehouseId: box.currentLocation?.shelf?.rack?.room?.warehouse?.id || null,
         deviceId,
-        previousState: { boxId: prevBoxId },
+        previousState: { boxId: null },
         newState: {
           action: 'FILE_INSERTED_IN_BOX',
           fileBarcode: file.barcode,
@@ -480,6 +477,10 @@ router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Re
       return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create or update file record' } });
     }
 
+    const updatedCount = await prisma.fileRecord.count({
+      where: { boxId: box.id, status: 'ACTIVE' }
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -487,11 +488,18 @@ router.post('/search/boxes/:id/files', async (req: AuthenticatedRequest, res: Re
         barcode: file.barcode,
         title: (file as any).title ?? file.barcode,
         boxId: box.id,
-        boxBarcode: box.barcode
+        boxBarcode: box.barcode,
+        filesCount: updatedCount
       },
       message: `File ${file.barcode} inserted into Box ${box.barcode} successfully`
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { code: error.code || 'ERROR', message: error.message }
+      });
+    }
     next(error);
   }
 });

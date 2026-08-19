@@ -7,7 +7,9 @@ export class ScanController {
   static async lookupBarcode(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = lookupBarcodeSchema.parse(req.query);
-      const result = await ScanService.lookupBarcode(req.user!.companyId, data.barcode);
+      const userId = req.user!.id;
+      const deviceId = (req.headers['x-device-id'] as string) || (req as any).deviceId || null;
+      const result = await ScanService.lookupBarcode(req.user!.companyId, data.barcode, userId, deviceId);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);

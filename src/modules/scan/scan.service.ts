@@ -5,7 +5,7 @@ import { ErrorCode } from '../../lib/error-codes';
 import { AuditService } from '../audit/audit.service';
 
 export class ScanService {
-  static async lookupBarcode(companyId: string, barcode: string) {
+  static async lookupBarcode(companyId: string, barcode: string, userId?: string, deviceId?: string | null) {
     const cleanBarcode = barcode ? barcode.trim().toUpperCase() : '';
     if (!cleanBarcode) {
       const error: AppError = new Error('Barcode is required');
@@ -72,6 +72,7 @@ export class ScanService {
       return {
         entityType: 'LOCATION',
         entity: {
+          id: location.id,
           barcode: location.barcode,
           code: location.name,
           label: location.name,
@@ -139,6 +140,27 @@ export class ScanService {
     });
 
     if (box) {
+      // Record scan audit log
+      if (userId) {
+        AuditService.recordAuditLog({
+          companyId,
+          userId,
+          action: 'INVENTORY_VERIFY',
+          entityType: 'BOX',
+          entityId: box.id,
+          boxId: box.id,
+          locationId: box.currentLocationId,
+          warehouseId: box.currentLocation?.shelf?.rack?.room?.warehouse?.id || null,
+          deviceId: deviceId || null,
+          newState: {
+            action: 'SCAN',
+            entityType: 'BOX',
+            barcode: box.barcode,
+            id: box.id
+          }
+        }).catch(err => console.error('Error recording box scan audit:', err));
+      }
+
       // Get files in this box
       const files = await prisma.fileRecord.findMany({
         where: {
@@ -150,6 +172,7 @@ export class ScanService {
       return {
         entityType: 'BOX',
         entity: {
+          id: box.id,
           barcode: box.barcode,
           code: box.barcode,
           label: box.description,
@@ -179,10 +202,7 @@ export class ScanService {
     const file = await prisma.fileRecord.findFirst({
       where: {
         barcode: cleanBarcode,
-        box: {
-          companyId,
-          status: 'ACTIVE'
-        }
+        companyId
       },
       include: {
         box: {
@@ -218,25 +238,51 @@ export class ScanService {
     });
 
     if (file) {
+      const loc = file.box?.currentLocation;
+
+      // Record scan audit log
+      if (userId) {
+        AuditService.recordAuditLog({
+          companyId,
+          userId,
+          action: 'INVENTORY_VERIFY',
+          entityType: 'FILE_RECORD',
+          entityId: file.id,
+          fileRecordId: file.id,
+          boxId: file.boxId,
+          locationId: file.box?.currentLocationId || null,
+          warehouseId: loc?.shelf?.rack?.room?.warehouse?.id || null,
+          deviceId: deviceId || null,
+          newState: {
+            action: 'SCAN',
+            entityType: 'FILE',
+            barcode: file.barcode,
+            id: file.id
+          }
+        }).catch(err => console.error('Error recording file scan audit:', err));
+      }
+
       return {
         entityType: 'FILE',
         entity: {
+          id: file.id,
           barcode: file.barcode,
           code: file.barcode,
           label: file.title,
           status: file.status,
           capacity: null,
           occupied: null,
-          locationBarcode: file.box.currentLocation?.barcode || null,
-          boxBarcode: file.box.barcode
+          locationBarcode: loc?.barcode || null,
+          boxBarcode: file.box?.barcode || null,
+          boxId: file.box?.id || null
         },
         contents: [],
-        path: file.box.currentLocation ? [
-          { type: 'warehouse', name: file.box.currentLocation.shelf.rack.room.warehouse.name },
-          { type: 'room', name: file.box.currentLocation.shelf.rack.room.name },
-          { type: 'rack', name: file.box.currentLocation.shelf.rack.name },
-          { type: 'shelf', name: file.box.currentLocation.shelf.name },
-          { type: 'location', name: file.box.currentLocation.name }
+        path: loc ? [
+          { type: 'warehouse', name: loc.shelf.rack.room.warehouse.name },
+          { type: 'room', name: loc.shelf.rack.room.name },
+          { type: 'rack', name: loc.shelf.rack.name },
+          { type: 'shelf', name: loc.shelf.name },
+          { type: 'location', name: loc.name }
         ] : []
       };
     }
@@ -300,6 +346,7 @@ export class ScanService {
           return {
             entityType: 'BOX',
             entity: {
+              id: linkedBox.id,
               barcode: cleanBarcode,
               code: cleanBarcode,
               label: linkedBox.description || `Box ${cleanBarcode}`,
@@ -329,6 +376,7 @@ export class ScanService {
         return {
           entityType: 'BOX',
           entity: {
+            id: barcodeMaster.id,
             barcode: cleanBarcode,
             code: cleanBarcode,
             label: barcodeMaster.remarks || `Box Barcode ${cleanBarcode}`,
@@ -346,9 +394,18 @@ export class ScanService {
 
       // If File Barcode in BarcodeMaster
       if (barcodeMaster.type === 'FILE_RECORD' || barcodeMaster.assignedToType === 'FILE_RECORD') {
+        let actualFileId = barcodeMaster.assignedToId || barcodeMaster.id;
+        if (barcodeMaster.assignedToId) {
+          const linkedFile = await prisma.fileRecord.findFirst({
+            where: { id: barcodeMaster.assignedToId, companyId }
+          });
+          if (linkedFile) actualFileId = linkedFile.id;
+        }
+
         return {
           entityType: 'FILE',
           entity: {
+            id: actualFileId,
             barcode: cleanBarcode,
             code: cleanBarcode,
             label: barcodeMaster.remarks || `File Barcode ${cleanBarcode}`,
