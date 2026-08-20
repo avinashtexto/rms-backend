@@ -293,12 +293,13 @@ router.get(['/search/boxes/:id', '/boxes/:id'], async (req: AuthenticatedRequest
 router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const companyId = req.user!.companyId;
-    const fileId = String(req.params.id);
+    const rawId = String(req.params.id);
+    const fileId = rawId.trim().replace(/[\r\n\t]/g, '');
 
     let file: any = await prisma.fileRecord.findFirst({
       where: {
         companyId,
-        OR: [{ id: fileId }, { barcode: fileId }]
+        OR: [{ id: fileId }, { barcode: fileId }, { barcode: { equals: fileId, mode: 'insensitive' } }]
       },
       include: {
         box: {
@@ -333,7 +334,7 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
     if (!file) {
       file = await prisma.fileRecord.findFirst({
         where: {
-          OR: [{ id: fileId }, { barcode: fileId }]
+          OR: [{ id: fileId }, { barcode: fileId }, { barcode: { equals: fileId, mode: 'insensitive' } }]
         },
         include: {
           box: {
@@ -370,7 +371,7 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
       let barcodeMaster = await prisma.barcodeMaster.findFirst({
         where: {
           companyId,
-          OR: [{ id: fileId }, { barcode: fileId }],
+          OR: [{ id: fileId }, { barcode: fileId }, { barcode: { equals: fileId, mode: 'insensitive' } }],
           type: 'FILE_RECORD'
         },
         include: { warehouse: true }
@@ -379,7 +380,7 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
       if (!barcodeMaster) {
         barcodeMaster = await prisma.barcodeMaster.findFirst({
           where: {
-            OR: [{ id: fileId }, { barcode: fileId }],
+            OR: [{ id: fileId }, { barcode: fileId }, { barcode: { equals: fileId, mode: 'insensitive' } }],
             type: 'FILE_RECORD'
           },
           include: { warehouse: true }
@@ -410,7 +411,7 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
     }
 
     if (!file) {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: `File ${fileId} was not found.` } });
+      return res.status(404).json({ success: false, error: { code: 'FILE_NOT_FOUND', message: `File barcode ${fileId} was not found in the system.` } });
     }
 
     const loc = file.box?.currentLocation;
@@ -749,23 +750,34 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
     const deviceId = (req.headers['x-device-id'] as string) || (req.headers['x-device-serial'] as string);
 
     const { fileId, fileBarcode, targetBoxId, targetBoxBarcode, sourceBoxId, sourceBoxBarcode } = req.body ?? {};
-    const cleanFileBarcode = fileBarcode ? String(fileBarcode).trim().toUpperCase() : (fileId ? String(fileId).trim().toUpperCase() : '');
-    const cleanTargetBoxBarcode = targetBoxBarcode ? String(targetBoxBarcode).trim().toUpperCase() : (targetBoxId ? String(targetBoxId).trim().toUpperCase() : '');
+    const rawFileBarcode = (fileBarcode || fileId || '').toString();
+    const rawTargetBoxBarcode = (targetBoxBarcode || targetBoxId || '').toString();
+
+    const cleanFileBarcode = rawFileBarcode.trim().replace(/[\r\n\t]/g, '');
+    const cleanTargetBoxBarcode = rawTargetBoxBarcode.trim().replace(/[\r\n\t]/g, '');
+
+    console.log(`[REFILE] Scanned barcode: ${rawFileBarcode}`);
+    console.log(`[REFILE] Normalized barcode: ${cleanFileBarcode}`);
+    console.log(`[REFILE] Scanned target box: ${rawTargetBoxBarcode}`);
+    console.log(`[REFILE] Normalized target box: ${cleanTargetBoxBarcode}`);
 
     if (!cleanFileBarcode || !cleanTargetBoxBarcode) {
+      console.warn(`[REFILE] Result: FAILURE (VALIDATION_ERROR)`);
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'File barcode and target box barcode are required' }
       });
     }
 
-    console.log(`[REFILE_START] file=${cleanFileBarcode}, targetBox=${cleanTargetBoxBarcode}, companyId=${companyId}`);
-
     // 1. Resolve File
     let fileObj = await prisma.fileRecord.findFirst({
       where: {
         companyId,
-        OR: [{ id: cleanFileBarcode }, { barcode: cleanFileBarcode }]
+        OR: [
+          { id: cleanFileBarcode },
+          { barcode: cleanFileBarcode },
+          { barcode: { equals: cleanFileBarcode, mode: 'insensitive' } }
+        ]
       },
       include: {
         box: {
@@ -781,27 +793,55 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
     });
 
     if (!fileObj) {
-      console.warn(`[REFILE_FAILED] FILE_NOT_FOUND: ${cleanFileBarcode}`);
+      fileObj = await prisma.fileRecord.findFirst({
+        where: {
+          OR: [
+            { id: cleanFileBarcode },
+            { barcode: cleanFileBarcode },
+            { barcode: { equals: cleanFileBarcode, mode: 'insensitive' } }
+          ]
+        },
+        include: {
+          box: {
+            include: {
+              currentLocation: {
+                include: {
+                  shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    console.log(`[REFILE] File lookup result: ${fileObj ? fileObj.id : 'null'}`);
+
+    if (!fileObj) {
+      console.warn(`[REFILE] Result: FAILURE (FILE_NOT_FOUND)`);
       return res.status(404).json({
         success: false,
-        error: { code: 'FILE_NOT_FOUND', message: `File ${cleanFileBarcode} was not found.` }
+        error: { code: 'FILE_NOT_FOUND', message: `File barcode ${cleanFileBarcode} was not found in the system.` }
       });
     }
 
     const sourceBox = fileObj.box;
-    if (!sourceBox) {
-      console.warn(`[REFILE_FAILED] SOURCE_BOX_NOT_FOUND for file: ${cleanFileBarcode}`);
-      return res.status(404).json({
-        success: false,
-        error: { code: 'SOURCE_BOX_NOT_FOUND', message: `Current Box for file ${fileObj.barcode} could not be found.` }
-      });
-    }
+    const sourceBoxIdVal = sourceBox?.id ?? null;
+    const sourceBoxBarcodeVal = sourceBox?.barcode ?? 'Unassigned';
+    const sourceLocationName = sourceBox?.currentLocation?.name ?? 'Unassigned';
+
+    console.log(`[REFILE] Current box: ${sourceBoxIdVal} (${sourceBoxBarcodeVal})`);
+    console.log(`[REFILE] Current location: ${sourceLocationName}`);
 
     // 2. Resolve Target Box
     let targetBox = await prisma.box.findFirst({
       where: {
         companyId,
-        OR: [{ id: cleanTargetBoxBarcode }, { barcode: cleanTargetBoxBarcode }]
+        OR: [
+          { id: cleanTargetBoxBarcode },
+          { barcode: cleanTargetBoxBarcode },
+          { barcode: { equals: cleanTargetBoxBarcode, mode: 'insensitive' } }
+        ]
       },
       include: {
         currentLocation: {
@@ -816,7 +856,11 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       const masterBox = await prisma.barcodeMaster.findFirst({
         where: {
           companyId,
-          OR: [{ id: cleanTargetBoxBarcode }, { barcode: cleanTargetBoxBarcode }],
+          OR: [
+            { id: cleanTargetBoxBarcode },
+            { barcode: cleanTargetBoxBarcode },
+            { barcode: { equals: cleanTargetBoxBarcode, mode: 'insensitive' } }
+          ],
           type: 'BOX'
         }
       });
@@ -864,17 +908,22 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       }
     }
 
+    console.log(`[REFILE] Destination box: ${targetBox ? targetBox.id : 'null'} (${targetBox ? targetBox.barcode : 'null'})`);
+
     if (!targetBox) {
-      console.warn(`[REFILE_FAILED] TARGET_BOX_NOT_FOUND: ${cleanTargetBoxBarcode}`);
+      console.warn(`[REFILE] Result: FAILURE (TARGET_BOX_NOT_FOUND)`);
       return res.status(404).json({
         success: false,
         error: { code: 'TARGET_BOX_NOT_FOUND', message: `Box ${cleanTargetBoxBarcode} was not found.` }
       });
     }
 
+    const destLocationName = targetBox.currentLocation?.name ?? 'Unassigned';
+    console.log(`[REFILE] Destination location: ${destLocationName}`);
+
     // 3. Validate Target Box status and scope
     if (targetBox.status !== 'ACTIVE') {
-      console.warn(`[REFILE_FAILED] INACTIVE_BOX: ${targetBox.barcode}`);
+      console.warn(`[REFILE] Result: FAILURE (INACTIVE_BOX)`);
       return res.status(422).json({
         success: false,
         error: { code: 'INACTIVE_BOX', message: `Box ${targetBox.barcode} is not active and cannot receive files.` }
@@ -884,7 +933,7 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
     if (warehouseId) {
       const targetWarehouseId = targetBox.currentLocation?.shelf?.rack?.room?.warehouse?.id;
       if (targetWarehouseId && targetWarehouseId !== warehouseId) {
-        console.warn(`[REFILE_FAILED] DIFFERENT_WAREHOUSE: targetWarehouseId=${targetWarehouseId}, userWarehouseId=${warehouseId}`);
+        console.warn(`[REFILE] Result: FAILURE (DIFFERENT_WAREHOUSE)`);
         return res.status(403).json({
           success: false,
           error: { code: 'DIFFERENT_WAREHOUSE', message: `Target Box ${targetBox.barcode} belongs to a different warehouse.` }
@@ -892,12 +941,12 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       }
     }
 
-    // 4. Same Box Validation
-    if (sourceBox.id === targetBox.id) {
-      console.warn(`[REFILE_FAILED] SAME_BOX: file=${fileObj.barcode}, box=${targetBox.barcode}`);
+    // 4. Same Box Validation (Duplicate Check)
+    if (fileObj.boxId === targetBox.id) {
+      console.warn(`[REFILE] Result: FAILURE (SAME_BOX)`);
       return res.status(409).json({
         success: false,
-        error: { code: 'SAME_BOX', message: `File ${fileObj.barcode} is already inside Box ${targetBox.barcode}.` }
+        error: { code: 'SAME_BOX', message: `File ${fileObj.barcode} is already present in this box.` }
       });
     }
 
@@ -909,8 +958,10 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
         where: { boxId: targetBox.id, status: 'ACTIVE' }
       });
 
+      console.log(`[REFILE] Capacity: current=${activeCount}, max=${maxCapacity}`);
+
       if (activeCount >= maxCapacity) {
-        const err: AppError = new Error(`Box ${targetBox.barcode} has reached its maximum capacity of ${maxCapacity} files.`);
+        const err: AppError = new Error(`Cannot refile file. Box ${targetBox.barcode} has reached its maximum capacity of ${maxCapacity} files.`);
         err.statusCode = 409;
         err.code = ErrorCode.BOX_CAPACITY_EXCEEDED;
         throw err;
@@ -938,14 +989,14 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
         warehouseId: targetBox.currentLocation?.shelf?.rack?.room?.warehouse?.id || null,
         deviceId,
         previousState: {
-          boxId: sourceBox.id,
-          boxBarcode: sourceBox.barcode
+          boxId: sourceBoxIdVal,
+          boxBarcode: sourceBoxBarcodeVal
         },
         newState: {
           action: 'FILE_REFILED',
           fileBarcode: fileObj.barcode,
-          sourceBoxId: sourceBox.id,
-          sourceBoxBarcode: sourceBox.barcode,
+          sourceBoxId: sourceBoxIdVal,
+          sourceBoxBarcode: sourceBoxBarcodeVal,
           targetBoxId: targetBox.id,
           targetBoxBarcode: targetBox.barcode,
           company: companyId
@@ -953,29 +1004,27 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
         tx
       });
 
-      // Create RefileEvent record if locations exist
-      if (sourceBox.currentLocationId && targetBox.currentLocationId) {
-        try {
-          await tx.refileEvent.create({
-            data: {
-              operatorId: userId,
-              fileRecordId: fileObj.id,
-              expectedBoxId: sourceBox.id,
-              expectedLocationId: sourceBox.currentLocationId,
-              scannedLocationId: targetBox.currentLocationId,
-              scannedBoxId: targetBox.id,
-              action: 'REFILE_SUCCESS',
-              clientEventId: `REFILE-${fileObj.id}-${targetBox.id}-${Date.now()}`,
-              scannedAt: new Date()
-            }
-          });
-        } catch (e: any) {
-          console.warn('[REFILE_EVENT_WARN] Could not create RefileEvent record:', e.message);
-        }
+      // Create RefileEvent record if source/target boxes exist
+      try {
+        await tx.refileEvent.create({
+          data: {
+            operatorId: userId,
+            fileRecordId: fileObj.id,
+            expectedBoxId: sourceBoxIdVal || targetBox.id,
+            expectedLocationId: sourceBox?.currentLocationId || targetBox.currentLocationId || '',
+            scannedLocationId: targetBox.currentLocationId || '',
+            scannedBoxId: targetBox.id,
+            action: 'REFILE_SUCCESS',
+            clientEventId: `REFILE-${fileObj.id}-${targetBox.id}-${Date.now()}`,
+            scannedAt: new Date()
+          }
+        });
+      } catch (e: any) {
+        console.warn('[REFILE_EVENT_WARN] Could not create RefileEvent record:', e.message);
       }
     });
 
-    console.log(`[REFILE_SUCCESS] file=${fileObj.barcode}, from=${sourceBox.barcode}, to=${targetBox.barcode}`);
+    console.log(`[REFILE] Result: SUCCESS`);
 
     return res.status(200).json({
       success: true,
@@ -983,13 +1032,16 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       data: {
         fileId: fileObj.id,
         fileBarcode: fileObj.barcode,
-        sourceBoxId: sourceBox.id,
-        sourceBoxBarcode: sourceBox.barcode,
-        targetBoxId: targetBox.id,
-        targetBoxBarcode: targetBox.barcode
+        previousBoxId: sourceBoxIdVal,
+        previousBoxBarcode: sourceBoxBarcodeVal,
+        newBoxId: targetBox.id,
+        newBoxBarcode: targetBox.barcode,
+        previousLocation: sourceLocationName,
+        newLocation: destLocationName
       }
     });
   } catch (error: any) {
+    console.warn(`[REFILE] Result: FAILURE (${error.code || 'ERROR'}: ${error.message})`);
     if (error.statusCode) {
       return res.status(error.statusCode).json({
         success: false,

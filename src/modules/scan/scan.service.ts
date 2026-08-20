@@ -6,7 +6,7 @@ import { AuditService } from '../audit/audit.service';
 
 export class ScanService {
   static async lookupBarcode(companyId: string, barcode: string, userId?: string, deviceId?: string | null) {
-    const cleanBarcode = barcode ? barcode.trim().toUpperCase() : '';
+    const cleanBarcode = barcode ? barcode.trim().replace(/[\r\n\t]/g, '').toUpperCase() : '';
     if (!cleanBarcode) {
       const error: AppError = new Error('Barcode is required');
       error.statusCode = 400;
