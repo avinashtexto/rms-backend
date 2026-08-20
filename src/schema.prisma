@@ -143,6 +143,14 @@ enum WorkflowAction {
   RACK_TEMPLATE_CLONED
   RACK_TEMPLATE_APPLIED
   RACK_TEMPLATE_PREVIEWED
+  TASK_CREATED
+  TASK_ASSIGNED
+  TASK_ACCEPTED
+  TASK_STARTED
+  TASK_REASSIGNED
+  TASK_COMPLETED
+  TASK_REJECTED
+  TASK_CANCELLED
 }
 
 enum WarehouseTemplateType {
@@ -229,6 +237,7 @@ model Company {
   vendors       Vendor[]
   workOrders    WorkOrder[]
   inventoryMovements InventoryMovementHistory[]
+  tasks         Task[]
 
   @@map("companies")
 }
@@ -309,6 +318,7 @@ model Warehouse {
   transfersTo     Transfer[]                @relation("TransferToWarehouse")
   barcodes        BarcodeMaster[]
   locations       Location[]
+  tasks           Task[]
 
   @@unique([siteId, code])
   @@index([companyId])
@@ -406,6 +416,8 @@ model Location {
   refileEvents     RefileEvent[]
   locationOverride LocationOverride[]
   auditLogs        AuditLog[]
+  tasksSourceLocation      Task[] @relation("TaskSourceLocation")
+  tasksDestinationLocation Task[] @relation("TaskDestinationLocation")
 
   @@unique([shelfId, name])
   @@index([barcode])
@@ -526,6 +538,8 @@ model User {
   createdBarcodes        BarcodeMaster[]
   barcodeHistories       BarcodeHistory[]
   workOrders             WorkOrder[]
+  tasksAssignedTo        Task[]                         @relation("TaskAssignedTo")
+  tasksAssignedBy        Task[]                         @relation("TaskAssignedBy")
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -638,6 +652,7 @@ model Box {
   segregationNewBox             SegregationSession[]           @relation("SegregationNewBox")
   transfers                     Transfer[]
   auditLogs                     AuditLog[]
+  tasks                         Task[]
 
   @@index([companyId, clientId])
   @@index([barcode])
@@ -664,6 +679,7 @@ model FileRecord {
   refileEvents               RefileEvent[]
   segregationMovedFiles      SegregationFileMove[]
   auditLogs                  AuditLog[]
+  tasks                      Task[]
 
   @@index([companyId, boxId])
   @@index([barcode])
@@ -1233,5 +1249,77 @@ model InventoryMovementHistory {
 
   @@index([companyId, barcode])
   @@map("inventory_movement_histories")
+}
+
+// ============================================================
+// TASK MANAGEMENT MODULE
+// ============================================================
+
+enum TaskType {
+  BOX_SCAN
+  FILE_INSERT
+  FILE_REFILE
+  BOX_TRANSFER
+  SEGREGATION
+  LOCATION_VERIFICATION
+  FILE_VERIFICATION
+  BOX_VERIFICATION
+  CUSTOM
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  ASSIGNED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  CANCELLED
+  OVERDUE
+}
+
+model Task {
+  id                    String       @id @default(uuid())
+  companyId             String
+  taskNumber            String       @unique
+  title                 String
+  description           String?
+  taskType              TaskType
+  priority              TaskPriority @default(MEDIUM)
+  status                TaskStatus   @default(ASSIGNED)
+  assignedToId          String
+  assignedById          String
+  warehouseId           String
+  boxId                 String?
+  fileId                String?
+  sourceLocationId      String?
+  destinationLocationId String?
+  dueDate               DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  rejectionReason       String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  company             Company    @relation(fields: [companyId], references: [id])
+  assignedTo          User       @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  assignedBy          User       @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  warehouse           Warehouse  @relation(fields: [warehouseId], references: [id])
+  box                 Box?       @relation(fields: [boxId], references: [id])
+  file                FileRecord? @relation(fields: [fileId], references: [id])
+  sourceLocation      Location?  @relation("TaskSourceLocation", fields: [sourceLocationId], references: [id])
+  destinationLocation Location?  @relation("TaskDestinationLocation", fields: [destinationLocationId], references: [id])
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([assignedToId])
+  @@index([status])
+  @@map("tasks")
 }
 

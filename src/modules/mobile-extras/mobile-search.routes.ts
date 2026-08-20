@@ -435,11 +435,14 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
       id: file.id,
       barcode: file.barcode,
       title: file.title ?? file.barcode,
+      clientName: file.box?.client?.name ?? null,
+      fileType: file.fileTypeId ?? null,
       parentBox: {
         id: file.box?.id ?? '',
         barcode: file.box?.barcode ?? 'Unassigned',
         name: file.box?.description ?? null,
-        location: file.box?.currentLocation?.name ?? 'Unassigned'
+        location: file.box?.currentLocation?.name ?? 'Unassigned',
+        warehouse: file.box?.currentLocation?.shelf?.rack?.room?.warehouse?.name ?? 'Unassigned'
       },
       locationChain: locationChain.length > 0 ? locationChain : ['Warehouse Location'],
       status: file.status,
