@@ -35,6 +35,7 @@ import fileTypeRoutes from '../modules/file-type/file-type.routes';
 import vendorRoutes from '../modules/vendor/vendor.routes';
 import workOrderRoutes from '../modules/work-order/work-order.routes';
 import inventoryMovementRoutes from '../modules/inventory-movement/inventory-movement.routes';
+import taskRoutes from '../modules/task/admin-task.routes';
 import syncRoutes from '../modules/sync/sync.routes';
 
 const adminRouter = Router();
@@ -49,6 +50,7 @@ adminRouter.use('/file-types', fileTypeRoutes);
 adminRouter.use('/vendors', vendorRoutes);
 adminRouter.use('/work-orders', workOrderRoutes);
 adminRouter.use('/inventory-movements', inventoryMovementRoutes);
+adminRouter.use('/tasks', taskRoutes);
 adminRouter.use('/companies', companyRoutes);
 adminRouter.use('/warehouses', warehouseRoutes);
 adminRouter.use('/users', userRoutes);

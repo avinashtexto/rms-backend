@@ -17,6 +17,7 @@ import mobileSearchRoutes from '../modules/mobile-extras/mobile-search.routes';
 import mobileWorkflowStubRoutes from '../modules/mobile-extras/mobile-workflow-stubs.routes';
 import mobileReportsRoutes from '../modules/mobile-extras/mobile-reports.routes';
 import locationRoutes from '../modules/location/location.routes';
+import mobileTaskRoutes from '../modules/task/mobile-task.routes';
 
 const mobileRouter = Router();
 
@@ -25,6 +26,7 @@ mobileRouter.use('/auth', authRoutes);
 mobileRouter.use('/scan', scanRoutes);
 mobileRouter.use('/splash', splashRoutes);
 mobileRouter.use('/dashboard', mobileDashboardRoutes);
+mobileRouter.use('/tasks', mobileTaskRoutes);
 mobileRouter.use('/sites', siteRoutes);
 mobileRouter.use('/workflows/fresh-box-move', freshBoxMoveRoutes);
 mobileRouter.use('/workflows/inventory-verify', inventoryVerifyRoutes);

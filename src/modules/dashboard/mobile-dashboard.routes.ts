@@ -77,28 +77,32 @@ router.get('/stats', async (req: any, res: Response) => {
           ...(locationScope.shelf ? { box: { currentLocation: locationScope } } : {})
         }
       }).catch(() => 0),
-      prisma.workOrder.count({
+      prisma.task.count({
         where: {
           companyId: companyId || undefined,
-          status: 'PENDING' as any
+          assignedToId: req.user.id,
+          status: 'ASSIGNED'
         }
       }).catch(() => 0),
-      prisma.workOrder.count({
+      prisma.task.count({
         where: {
           companyId: companyId || undefined,
-          status: 'IN_PROGRESS' as any
+          assignedToId: req.user.id,
+          status: 'IN_PROGRESS'
         }
       }).catch(() => 0),
-      prisma.workOrder.count({
+      prisma.task.count({
         where: {
           companyId: companyId || undefined,
-          status: 'COMPLETED' as any
+          assignedToId: req.user.id,
+          status: 'COMPLETED'
         }
       }).catch(() => 0),
-      prisma.workOrder.count({
+      prisma.task.count({
         where: {
           companyId: companyId || undefined,
-          priority: 'URGENT' as any
+          assignedToId: req.user.id,
+          priority: 'URGENT'
         }
       }).catch(() => 0)
     ]);
@@ -128,38 +132,52 @@ router.get('/stats', async (req: any, res: Response) => {
 
 router.get('/tasks', async (req: any, res: Response) => {
   try {
-    const tasks = [
-      {
-        id: "task-1",
-        type: "INVENTORY_VERIFICATION",
-        title: "Verify Box BOX-000001",
-        description: "Perform verification scan on box BOX-000001 in Location LOC-A-1-01.",
-        status: "PENDING",
-        priority: "HIGH",
-        assignedTo: req.user.employeeCode || "EMPOPR",
-        createdAt: new Date().toISOString(),
-        dueDate: new Date(Date.now() + 86400000).toISOString()
-      },
-      {
-        id: "task-2",
-        type: "FRESH_BOX_MOVE",
-        title: "Move Fresh Box",
-        description: "Scan and move fresh box to storage location.",
-        status: "IN_PROGRESS",
-        priority: "MEDIUM",
-        assignedTo: req.user.employeeCode || "EMPOPR",
-        createdAt: new Date().toISOString(),
-        dueDate: null
-      }
-    ];
-
     const { status } = req.query;
+    const whereClause: any = {
+      companyId: req.user.companyId,
+      assignedToId: req.user.id
+    };
+
     if (status) {
-      const filtered = tasks.filter(t => t.status === status);
-      return res.json(filtered);
+      whereClause.status = status;
+    } else {
+      whereClause.status = { not: 'CANCELLED' };
     }
 
-    res.json(tasks);
+    const tasks = await prisma.task.findMany({
+      where: whereClause,
+      include: {
+        assignedBy: { select: { id: true, fullName: true, employeeCode: true } },
+        warehouse: { select: { id: true, name: true, code: true } },
+        box: { select: { id: true, barcode: true, description: true } },
+        file: { select: { id: true, barcode: true, title: true } },
+        sourceLocation: { select: { id: true, barcode: true, name: true } },
+        destinationLocation: { select: { id: true, barcode: true, name: true } }
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    const formatted = tasks.map((t) => ({
+      id: t.id,
+      taskNumber: t.taskNumber,
+      type: t.taskType,
+      title: t.title,
+      description: t.description || '',
+      status: t.status,
+      priority: t.priority,
+      assignedTo: req.user.fullName || req.user.employeeCode || 'Me',
+      createdAt: t.createdAt.toISOString(),
+      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+      boxBarcode: t.box?.barcode || null,
+      fileBarcode: t.file?.barcode || null,
+      sourceLocation: t.sourceLocation?.barcode || null,
+      destinationLocation: t.destinationLocation?.barcode || null
+    }));
+
+    res.json(formatted);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
