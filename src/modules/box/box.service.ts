@@ -88,9 +88,16 @@ export class BoxService {
       throw error;
     }
 
+    const maxCapacity = box.capacity || (box.currentLocation as any)?.shelf?.rack?.room?.warehouse?.maxFilesPerBox || 50;
+    const fileCount = box.fileRecords.length;
+    const availableSlots = Math.max(0, maxCapacity - fileCount);
+
     return {
       ...box,
       label: box.description,
+      capacity: maxCapacity,
+      fileCount,
+      availableSlots,
       location: box.currentLocation
         ? {
             id: box.currentLocation.id,

@@ -199,7 +199,7 @@ export class ScanService {
     }
 
     // Try to find as file
-    const file = await prisma.fileRecord.findFirst({
+    let file = await prisma.fileRecord.findFirst({
       where: {
         barcode: cleanBarcode,
         companyId
@@ -237,8 +237,47 @@ export class ScanService {
       }
     });
 
+    // Fallback search without companyId restriction if not found under current user's companyId
+    if (!file) {
+      file = await prisma.fileRecord.findFirst({
+        where: { barcode: cleanBarcode },
+        include: {
+          box: {
+            include: {
+              currentLocation: {
+                include: {
+                  shelf: {
+                    include: {
+                      rack: {
+                        include: {
+                          room: {
+                            include: {
+                              warehouse: {
+                                include: {
+                                  site: {
+                                    include: {
+                                      branch: true
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
     if (file) {
       const loc = file.box?.currentLocation;
+      const warehouse = loc?.shelf?.rack?.room?.warehouse;
 
       // Record scan audit log
       if (userId) {
@@ -251,7 +290,7 @@ export class ScanService {
           fileRecordId: file.id,
           boxId: file.boxId,
           locationId: file.box?.currentLocationId || null,
-          warehouseId: loc?.shelf?.rack?.room?.warehouse?.id || null,
+          warehouseId: warehouse?.id || null,
           deviceId: deviceId || null,
           newState: {
             action: 'SCAN',
@@ -266,15 +305,21 @@ export class ScanService {
         entityType: 'FILE',
         entity: {
           id: file.id,
+          fileId: file.id,
           barcode: file.barcode,
           code: file.barcode,
           label: file.title,
+          fileName: file.title,
           status: file.status,
           capacity: null,
           occupied: null,
           locationBarcode: loc?.barcode || null,
+          location: loc?.name || loc?.barcode || null,
           boxBarcode: file.box?.barcode || null,
-          boxId: file.box?.id || null
+          boxId: file.box?.id || null,
+          warehouseId: warehouse?.id || null,
+          warehouseName: warehouse?.name || null,
+          currentAssignment: file.box ? `Box ${file.box.barcode}` : null
         },
         contents: [],
         path: loc ? [
@@ -288,7 +333,7 @@ export class ScanService {
     }
 
     // Try to find in BarcodeMaster
-    const barcodeMaster = await prisma.barcodeMaster.findFirst({
+    let barcodeMaster = await prisma.barcodeMaster.findFirst({
       where: {
         barcode: cleanBarcode,
         companyId
@@ -299,6 +344,17 @@ export class ScanService {
         branch: true
       }
     });
+
+    if (!barcodeMaster) {
+      barcodeMaster = await prisma.barcodeMaster.findFirst({
+        where: { barcode: cleanBarcode },
+        include: {
+          warehouse: true,
+          site: true,
+          branch: true
+        }
+      });
+    }
 
     if (barcodeMaster) {
       // If linked to Box
@@ -395,28 +451,56 @@ export class ScanService {
       // If File Barcode in BarcodeMaster
       if (barcodeMaster.type === 'FILE_RECORD' || barcodeMaster.assignedToType === 'FILE_RECORD') {
         let actualFileId = barcodeMaster.assignedToId || barcodeMaster.id;
+        let linkedFile = null;
         if (barcodeMaster.assignedToId) {
-          const linkedFile = await prisma.fileRecord.findFirst({
-            where: { id: barcodeMaster.assignedToId, companyId }
+          linkedFile = await prisma.fileRecord.findFirst({
+            where: { id: barcodeMaster.assignedToId, companyId },
+            include: {
+              box: {
+                include: {
+                  currentLocation: {
+                    include: {
+                      shelf: { include: { rack: { include: { room: { include: { warehouse: true } } } } } }
+                    }
+                  }
+                }
+              }
+            }
           });
           if (linkedFile) actualFileId = linkedFile.id;
         }
+
+        const loc = linkedFile?.box?.currentLocation;
+        const warehouse = loc?.shelf?.rack?.room?.warehouse || barcodeMaster.warehouse;
 
         return {
           entityType: 'FILE',
           entity: {
             id: actualFileId,
+            fileId: actualFileId,
             barcode: cleanBarcode,
             code: cleanBarcode,
-            label: barcodeMaster.remarks || `File Barcode ${cleanBarcode}`,
-            status: barcodeMaster.status,
+            label: linkedFile?.title || barcodeMaster.remarks || `File Barcode ${cleanBarcode}`,
+            fileName: linkedFile?.title || barcodeMaster.remarks || `File Barcode ${cleanBarcode}`,
+            status: linkedFile?.status || barcodeMaster.status,
             capacity: null,
             occupied: null,
-            locationBarcode: null,
-            boxBarcode: null
+            locationBarcode: loc?.barcode || null,
+            location: loc?.name || loc?.barcode || null,
+            boxBarcode: linkedFile?.box?.barcode || null,
+            boxId: linkedFile?.box?.id || null,
+            warehouseId: warehouse?.id || null,
+            warehouseName: warehouse?.name || null,
+            currentAssignment: linkedFile?.box ? `Box ${linkedFile.box.barcode}` : null
           },
           contents: [],
-          path: []
+          path: loc ? [
+            { type: 'warehouse', name: loc.shelf.rack.room.warehouse.name },
+            { type: 'room', name: loc.shelf.rack.room.name },
+            { type: 'rack', name: loc.shelf.rack.name },
+            { type: 'shelf', name: loc.shelf.name },
+            { type: 'location', name: loc.name }
+          ] : (warehouse ? [{ type: 'warehouse', name: warehouse.name }] : [])
         };
       }
 

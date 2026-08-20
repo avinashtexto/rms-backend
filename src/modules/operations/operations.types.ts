@@ -31,7 +31,9 @@ export interface OperationSummary {
   };
   summary: string;
   reasonCode?: string;
+  fileId?: string;
   fileBarcode?: string;
+  boxId?: string;
   boxBarcode?: string;
   warehouseName?: string;
   verifiedCount?: number;

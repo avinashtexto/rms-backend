@@ -37,13 +37,13 @@ router.get('/stats', async (req: any, res: Response) => {
           scannedAt: { gte: today },
           ...(locationScope.shelf ? { location: locationScope } : {})
         }
-      }),
+      }).catch(() => 0),
       prisma.inventoryVerificationScan.count({
         where: {
           scannedAt: { gte: today },
-          ...(locationScope.shelf ? { location: locationScope } : {})
+          ...(locationScope.shelf ? { box: { currentLocation: locationScope } } : {})
         }
-      }),
+      }).catch(() => 0),
       prisma.refileEvent.count({
         where: {
           scannedAt: { gte: today },
@@ -62,21 +62,21 @@ router.get('/stats', async (req: any, res: Response) => {
           companyId: companyId || undefined,
           ...(locationScope.shelf ? { currentLocation: locationScope } : {})
         }
-      }),
+      }).catch(() => 0),
       prisma.box.count({
         where: {
           companyId: companyId || undefined,
           status: 'ACTIVE',
           ...(locationScope.shelf ? { currentLocation: locationScope } : {})
         }
-      }),
+      }).catch(() => 0),
       prisma.fileRecord.count({
         where: {
           companyId: companyId || undefined,
           status: 'ACTIVE',
           ...(locationScope.shelf ? { box: { currentLocation: locationScope } } : {})
         }
-      }),
+      }).catch(() => 0),
       prisma.workOrder.count({
         where: {
           companyId: companyId || undefined,
@@ -109,16 +109,20 @@ router.get('/stats', async (req: any, res: Response) => {
     const totalTasks = pendingWorkOrders + inProgressWorkOrders + completedWorkOrders;
 
     res.json({
-      totalTasks: totalTasks > 0 ? totalTasks : totalBoxes,
-      pendingTasks: pendingWorkOrders > 0 ? pendingWorkOrders : (totalBoxes - activeBoxes),
-      inProgressTasks: inProgressWorkOrders > 0 ? inProgressWorkOrders : (boxesMovedToday + refilesToday),
-      completedTasks: completedWorkOrders > 0 ? completedWorkOrders : activeBoxes,
-      urgentTasks: urgentWorkOrders,
-      boxesProcessedToday: boxesProcessedToday > 0 ? boxesProcessedToday : totalBoxes,
-      filesScannedToday: filesScannedToday > 0 ? filesScannedToday : totalFiles
+      success: true,
+      data: {
+        totalTasks: totalTasks > 0 ? totalTasks : totalBoxes,
+        pendingTasks: pendingWorkOrders > 0 ? pendingWorkOrders : (totalBoxes - activeBoxes),
+        inProgressTasks: inProgressWorkOrders > 0 ? inProgressWorkOrders : (boxesMovedToday + refilesToday),
+        completedTasks: completedWorkOrders > 0 ? completedWorkOrders : activeBoxes,
+        urgentTasks: urgentWorkOrders,
+        boxesProcessedToday: boxesProcessedToday > 0 ? boxesProcessedToday : totalBoxes,
+        filesScannedToday: filesScannedToday > 0 ? filesScannedToday : totalFiles
+      }
     });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    console.error('MOBILE DASHBOARD STATS ERROR:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
 });
 

@@ -16,6 +16,7 @@ import siteRoutes from '../modules/site/site.routes';
 import mobileSearchRoutes from '../modules/mobile-extras/mobile-search.routes';
 import mobileWorkflowStubRoutes from '../modules/mobile-extras/mobile-workflow-stubs.routes';
 import mobileReportsRoutes from '../modules/mobile-extras/mobile-reports.routes';
+import locationRoutes from '../modules/location/location.routes';
 
 const mobileRouter = Router();
 
@@ -39,6 +40,8 @@ mobileRouter.use('/notifications', notificationRoutes);
 mobileRouter.use('/', mobileSearchRoutes);
 mobileRouter.use('/', mobileWorkflowStubRoutes);
 mobileRouter.use('/', mobileReportsRoutes);
+mobileRouter.use('/locations', locationRoutes);
+mobileRouter.use('/', locationRoutes);
 
 // Shared/root-level modules (these expose barcode lookups like '/boxes/barcode/:barcode', etc.)
 mobileRouter.use('/', boxRoutes);

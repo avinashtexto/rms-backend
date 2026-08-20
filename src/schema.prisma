@@ -296,6 +296,7 @@ model Warehouse {
   phone     String?
   latitude  Float?
   longitude Float?
+  maxFilesPerBox Int @default(50)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -307,6 +308,7 @@ model Warehouse {
   transfersFrom   Transfer[]                @relation("TransferFromWarehouse")
   transfersTo     Transfer[]                @relation("TransferToWarehouse")
   barcodes        BarcodeMaster[]
+  locations       Location[]
 
   @@unique([siteId, code])
   @@index([companyId])
@@ -375,18 +377,27 @@ model Shelf {
 
 // Smallest addressable physical slot. Has its own barcode.
 model Location {
-  id         String   @id @default(uuid())
-  shelfId    String
-  levelId    String?
-  name       String
-  barcode    String   @unique
-  isOccupied Boolean  @default(false)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(uuid())
+  warehouseId   String?
+  shelfId       String
+  levelId       String?
+  name          String
+  barcode       String   @unique
+  fullLocation  String?
+  row           String?
+  rack          String?
+  level         String?
+  location      String?
+  fullLocation2 String?
+  isOccupied    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  status        MasterRecordStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  shelf Shelf  @relation(fields: [shelfId], references: [id])
-  level Level? @relation(fields: [levelId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+  shelf     Shelf      @relation(fields: [shelfId], references: [id])
+  levelRel  Level?     @relation(fields: [levelId], references: [id])
 
   // exactly one currently-active box may point here (enforced in service layer via transaction)
   currentBox Box?
@@ -398,6 +409,7 @@ model Location {
 
   @@unique([shelfId, name])
   @@index([barcode])
+  @@index([warehouseId])
   @@map("locations")
 }
 

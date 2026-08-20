@@ -133,8 +133,8 @@ export class OperationsService {
           where: auditWhere,
           include: {
             user: { select: { id: true, fullName: true, email: true } },
-            box: { select: { barcode: true } },
-            fileRecord: { select: { barcode: true } }
+            box: { select: { id: true, barcode: true } },
+            fileRecord: { select: { id: true, barcode: true } }
           },
           orderBy: { createdAt: 'desc' },
           take: query.limit * query.page
@@ -147,12 +147,16 @@ export class OperationsService {
 
             const state = (log.newState ?? {}) as Record<string, unknown>;
             let summary = String(log.action);
+            let boxBarcode = log.box?.barcode;
 
             if (type === OperationType.FRESH_BOX) {
               const boxes = Array.isArray(state.boxBarcodes)
                 ? state.boxBarcodes.join(', ')
                 : auditRelationBarcode(log);
               summary = `Fresh box move → ${boxes ?? 'unknown'}`;
+              if (!boxBarcode && Array.isArray(state.boxBarcodes) && state.boxBarcodes.length > 0) {
+                boxBarcode = state.boxBarcodes[0] as string;
+              }
             } else if (type === OperationType.INTAKE) {
               summary = `Intake ${auditRelationBarcode(log) ?? 'box'}`;
             }
@@ -163,7 +167,11 @@ export class OperationsService {
               status: 'COMPLETED',
               performedAt: log.createdAt,
               user: log.user,
-              summary
+              summary,
+              boxId: log.boxId ?? log.box?.id,
+              boxBarcode: boxBarcode ?? log.box?.barcode,
+              fileId: log.fileRecordId ?? log.fileRecord?.id,
+              fileBarcode: log.fileRecord?.barcode
             };
 
             return [item];
