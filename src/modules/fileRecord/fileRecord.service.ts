@@ -80,6 +80,20 @@ export class FileRecordService {
         finalBarcode = await BarcodeMasterService.generateNextFileCode(tx);
       }
 
+      // Check if provided barcode is a Box or Location barcode
+      const isBox = await tx.box.findFirst({
+        where: { companyId, barcode: { equals: finalBarcode, mode: 'insensitive' } }
+      });
+      const isBoxMaster = await tx.barcodeMaster.findFirst({
+        where: { companyId, barcode: { equals: finalBarcode, mode: 'insensitive' }, type: 'BOX' }
+      });
+      if (isBox || isBoxMaster) {
+        const error: AppError = new Error('Invalid barcode. Please scan a File barcode.');
+        error.statusCode = 400;
+        error.code = ErrorCode.INVALID_BARCODE_TYPE;
+        throw error;
+      }
+
       const existing = await tx.fileRecord.findUnique({
         where: { barcode: finalBarcode }
       });

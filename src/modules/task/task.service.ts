@@ -567,16 +567,51 @@ export class TaskService {
         throw new Error('BOX_BARCODE_REQUIRED: Scan or specify target box barcode to complete FILE_INSERT task.');
       }
 
-      // Execute real file insertion if file and box specified
       const targetFileBc = cleanFileBc || task.file?.barcode;
       const targetBoxBc = cleanBoxBc || task.box?.barcode;
 
+      if (cleanFileBc) {
+        // Validate cleanFileBc is not a Box
+        const isBox = await prisma.box.findFirst({ where: { barcode: { equals: cleanFileBc, mode: 'insensitive' } } });
+        if (isBox) {
+          throw new Error('INVALID_BARCODE_TYPE: Invalid barcode. Please scan a File barcode.');
+        }
+
+        // Validate task file matching
+        if (task.file?.barcode && cleanFileBc.toUpperCase() !== task.file.barcode.toUpperCase()) {
+          throw new Error('TASK_FILE_MISMATCH: This is not the File assigned to this task.');
+        }
+      }
+
+      if (cleanBoxBc) {
+        // Validate cleanBoxBc is not a File
+        const isFile = await prisma.fileRecord.findFirst({ where: { barcode: { equals: cleanBoxBc, mode: 'insensitive' } } });
+        if (isFile) {
+          throw new Error('INVALID_BARCODE_TYPE: Invalid barcode. Please scan a Box barcode.');
+        }
+
+        // Validate task box matching
+        if (task.box?.barcode && cleanBoxBc.toUpperCase() !== task.box.barcode.toUpperCase()) {
+          throw new Error('TASK_BOX_MISMATCH: This is not the Box assigned to this task.');
+        }
+      }
+
       if (targetFileBc && targetBoxBc) {
-        const fileRec = await prisma.fileRecord.findFirst({ where: { barcode: targetFileBc } });
-        const boxRec = await prisma.box.findFirst({ where: { barcode: targetBoxBc } });
+        const fileRec = await prisma.fileRecord.findFirst({ where: { barcode: { equals: targetFileBc, mode: 'insensitive' } } });
+        const boxRec = await prisma.box.findFirst({ where: { barcode: { equals: targetBoxBc, mode: 'insensitive' } } });
 
         if (!fileRec) throw new Error(`FILE_NOT_FOUND: File ${targetFileBc} not found.`);
         if (!boxRec) throw new Error(`BOX_NOT_FOUND: Box ${targetBoxBc} not found.`);
+
+        if (fileRec.boxId === boxRec.id) {
+          throw new Error(`FILE_ALREADY_IN_BOX: File ${targetFileBc} is already present in this box.`);
+        }
+
+        const maxCap = boxRec.capacity || 25;
+        const currentCount = await prisma.fileRecord.count({ where: { boxId: boxRec.id, status: 'ACTIVE' } });
+        if (currentCount >= maxCap) {
+          throw new Error(`BOX_CAPACITY_EXCEEDED: Cannot insert file. Box ${boxRec.barcode} is full (${currentCount}/${maxCap}).`);
+        }
 
         // Move file into box
         await prisma.fileRecord.update({

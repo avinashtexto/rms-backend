@@ -80,17 +80,23 @@ export class BoxesRecordsService {
     ]);
 
     return {
-      data: boxes.map((box) => ({
-        id: box.id,
-        barcode: box.barcode,
-        label: box.description,
-        status: box.status,
-        fileCapacity: box.fileCapacity,
-        client: box.client,
-        location: box.currentLocation,
-        fileCount: box._count.fileRecords,
-        updatedAt: box.updatedAt
-      })),
+      data: boxes.map((box) => {
+        const capacity = box.capacity ?? box.fileCapacity ?? 25;
+        const fileCount = box._count.fileRecords;
+        return {
+          id: box.id,
+          barcode: box.barcode,
+          label: box.description,
+          status: box.status,
+          capacity,
+          fileCapacity: box.fileCapacity ?? capacity,
+          client: box.client,
+          location: box.currentLocation,
+          fileCount,
+          availableSlots: Math.max(0, capacity - fileCount),
+          updatedAt: box.updatedAt
+        };
+      }),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -132,13 +138,16 @@ export class BoxesRecordsService {
       throw error;
     }
 
+    const capacity = box.capacity ?? box.fileCapacity ?? 25;
+    const fileCount = box.fileRecords.length;
+
     return {
       id: box.id,
       barcode: box.barcode,
       label: box.description,
       status: box.status,
-      fileCapacity: box.fileCapacity,
-      capacity: box.capacity,
+      capacity,
+      fileCapacity: box.fileCapacity ?? capacity,
       client: box.client,
       department: box.department,
       location: box.currentLocation
@@ -156,22 +165,66 @@ export class BoxesRecordsService {
         status: file.status,
         updatedAt: file.updatedAt
       })),
+      fileCount,
+      availableSlots: Math.max(0, capacity - fileCount),
       updatedAt: box.updatedAt
     };
   }
 
   static async update(
     idOrBarcode: string,
-    data: { label?: string; fileCapacity?: number },
+    data: { label?: string; capacity?: number; fileCapacity?: number },
     user: RecordsUser
   ) {
-    const box = await BoxesRecordsService.findBoxOrThrow(user.companyId, idOrBarcode);
+    const box = await prisma.box.findFirst({
+      where: {
+        companyId: user.companyId,
+        ...(isUuid(idOrBarcode) ? { id: idOrBarcode } : { barcode: idOrBarcode })
+      },
+      include: {
+        _count: { select: { fileRecords: true } }
+      }
+    });
+
+    if (!box) {
+      const error: AppError = new Error('Box not found or access denied');
+      error.statusCode = 404;
+      error.code = ErrorCode.BOX_NOT_FOUND;
+      throw error;
+    }
+
+    const currentFileCount = box._count.fileRecords;
+    const targetCapacity = data.capacity !== undefined ? data.capacity : data.fileCapacity;
+
+    if (targetCapacity !== undefined) {
+      if (targetCapacity < 1) {
+        const error: AppError = new Error('Box capacity must be at least 1');
+        error.statusCode = 400;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
+
+      if (targetCapacity < currentFileCount) {
+        const error: AppError = new Error(
+          `Cannot reduce box capacity below the current file count (${currentFileCount}).`
+        );
+        error.statusCode = 400;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
+    }
+
+    const prevCapacity = box.capacity ?? box.fileCapacity ?? 25;
+    const newCapacity = targetCapacity !== undefined ? targetCapacity : prevCapacity;
 
     const updated = await prisma.box.update({
       where: { id: box.id },
       data: {
         ...(data.label !== undefined && { description: data.label }),
-        ...(data.fileCapacity !== undefined && { fileCapacity: data.fileCapacity })
+        ...(targetCapacity !== undefined && {
+          capacity: targetCapacity,
+          fileCapacity: targetCapacity
+        })
       },
       include: {
         client: { select: { id: true, code: true, name: true } },
@@ -180,7 +233,7 @@ export class BoxesRecordsService {
       }
     });
 
-    if (data.label !== undefined || data.fileCapacity !== undefined) {
+    if (data.label !== undefined || targetCapacity !== undefined) {
       await prisma.auditLog.create({
         data: {
           companyId: user.companyId,
@@ -189,25 +242,32 @@ export class BoxesRecordsService {
           action: WorkflowAction.BOX_UPDATED,
           previousState: {
             label: box.description,
+            capacity: prevCapacity,
             fileCapacity: box.fileCapacity
           },
           newState: {
             label: updated.description,
+            capacity: newCapacity,
             fileCapacity: updated.fileCapacity
           }
         }
       });
     }
 
+    const updatedCapacity = updated.capacity ?? updated.fileCapacity ?? 25;
+    const updatedFileCount = updated._count.fileRecords;
+
     return {
       id: updated.id,
       barcode: updated.barcode,
       label: updated.description,
       status: updated.status,
+      capacity: updatedCapacity,
       fileCapacity: updated.fileCapacity,
       client: updated.client,
       location: updated.currentLocation,
-      fileCount: updated._count.fileRecords,
+      fileCount: updatedFileCount,
+      availableSlots: Math.max(0, updatedCapacity - updatedFileCount),
       updatedAt: updated.updatedAt
     };
   }

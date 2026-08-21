@@ -87,6 +87,8 @@ export class BoxController {
   static async updateBox(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const companyId = req.user!.companyId;
+      const userId = req.user?.id || (req.user as any)?.userId;
+      const deviceId = req.user?.deviceId || (req.headers['x-device-id'] as string) || null;
       const boxId = req.params.boxId as string;
       const data = updateBoxSchema.parse(req.body);
       const box = await BoxService.updateBox(
@@ -96,9 +98,11 @@ export class BoxController {
         data.departmentId,
         data.description,
         data.status,
-        data.capacity
+        data.capacity,
+        userId,
+        deviceId
       );
-      res.status(200).json({ success: true, data: box });
+      res.status(200).json({ success: true, message: 'Box updated successfully', data: box });
     } catch (error) {
       next(error);
     }

@@ -35,10 +35,11 @@ export const listFilesQuerySchema = z.object({
 export const updateBoxRecordSchema = z
   .object({
     label: z.string().min(1).optional(),
-    fileCapacity: z.number().int().min(0).optional()
+    capacity: z.number().int().min(1).optional(),
+    fileCapacity: z.number().int().min(1).optional()
   })
-  .refine((data) => data.label !== undefined || data.fileCapacity !== undefined, {
-    message: 'At least one of label or fileCapacity must be provided'
+  .refine((data) => data.label !== undefined || data.capacity !== undefined || data.fileCapacity !== undefined, {
+    message: 'At least one of label, capacity, or fileCapacity must be provided'
   });
 
 export const updateFileRecordSchema = z

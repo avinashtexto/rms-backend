@@ -112,7 +112,7 @@ router.get('/search/barcode', async (req: AuthenticatedRequest, res: Response, n
     }
 
     const box = await prisma.box.findFirst({
-      where: { companyId, barcode },
+      where: { companyId, barcode: { equals: barcode, mode: 'insensitive' } },
       include: boxInclude
     });
     if (box) {
@@ -120,11 +120,86 @@ router.get('/search/barcode', async (req: AuthenticatedRequest, res: Response, n
     }
 
     const file = await prisma.fileRecord.findFirst({
-      where: { companyId, barcode },
+      where: { companyId, barcode: { equals: barcode, mode: 'insensitive' } },
       include: fileInclude
     });
     if (file) {
       return res.status(200).json({ success: true, data: fileToResult(file) });
+    }
+
+    // Check BarcodeMaster for pre-registered barcodes
+    const master = await prisma.barcodeMaster.findFirst({
+      where: { companyId, barcode: { equals: barcode, mode: 'insensitive' } },
+      include: { warehouse: true }
+    });
+    if (master) {
+      if (master.type === 'BOX') {
+        return res.status(200).json({
+          success: true,
+          data: {
+            type: 'BOX',
+            id: master.assignedToId || master.id,
+            barcode: master.barcode,
+            name: master.remarks || null,
+            title: null,
+            location: master.warehouse?.name ?? 'Unassigned',
+            clientId: null,
+            clientName: null,
+            boxBarcode: master.barcode
+          }
+        });
+      } else if (master.type === 'FILE_RECORD') {
+        return res.status(200).json({
+          success: true,
+          data: {
+            type: 'FILE',
+            id: master.assignedToId || master.id,
+            barcode: master.barcode,
+            name: null,
+            title: master.remarks || master.barcode,
+            location: master.warehouse?.name ?? 'Unassigned',
+            clientId: null,
+            clientName: null,
+            boxBarcode: null
+          }
+        });
+      } else if (master.type === 'LOCATION') {
+        return res.status(200).json({
+          success: true,
+          data: {
+            type: 'LOCATION',
+            id: master.assignedToId || master.id,
+            barcode: master.barcode,
+            name: master.remarks || null,
+            title: null,
+            location: master.warehouse?.name ?? 'Warehouse Location',
+            clientId: null,
+            clientName: null,
+            boxBarcode: null
+          }
+        });
+      }
+    }
+
+    // Check Location
+    const location = await prisma.location.findFirst({
+      where: { barcode: { equals: barcode, mode: 'insensitive' } }
+    });
+    if (location) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          type: 'LOCATION',
+          id: location.id,
+          barcode: location.barcode,
+          name: location.name,
+          title: null,
+          location: location.name,
+          clientId: null,
+          clientName: null,
+          boxBarcode: null
+        }
+      });
     }
 
     return res.status(200).json({ success: true, data: null });
@@ -388,6 +463,17 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
       }
 
       if (barcodeMaster) {
+        if (!barcodeMaster.isAssigned || !barcodeMaster.assignedToId) {
+          return res.status(404).json({
+            success: false,
+            code: 'FILE_NOT_FOUND',
+            error: {
+              code: 'FILE_NOT_FOUND',
+              message: `File barcode ${barcodeMaster.barcode} is not registered. Please register the file before refiling.`
+            }
+          });
+        }
+
         return res.status(200).json({
           success: true,
           data: {
@@ -411,7 +497,39 @@ router.get(['/search/files/:id', '/files/:id'], async (req: AuthenticatedRequest
     }
 
     if (!file) {
-      return res.status(404).json({ success: false, error: { code: 'FILE_NOT_FOUND', message: `File barcode ${fileId} was not found in the system.` } });
+      // Check if this barcode is actually a BOX
+      const isBox = await prisma.box.findFirst({
+        where: {
+          companyId,
+          OR: [{ id: fileId }, { barcode: fileId }, { barcode: { equals: fileId, mode: 'insensitive' } }]
+        }
+      }) || await prisma.barcodeMaster.findFirst({
+        where: {
+          companyId,
+          OR: [{ id: fileId }, { barcode: fileId }, { barcode: { equals: fileId, mode: 'insensitive' } }],
+          type: 'BOX'
+        }
+      });
+
+      if (isBox) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_BARCODE_TYPE',
+          error: {
+            code: 'INVALID_BARCODE_TYPE',
+            message: 'Invalid barcode. Please scan a File barcode.'
+          }
+        });
+      }
+
+      return res.status(404).json({
+        success: false,
+        code: 'FILE_NOT_FOUND',
+        error: {
+          code: 'FILE_NOT_FOUND',
+          message: `File barcode ${fileId} is not registered. Please register the file before refiling.`
+        }
+      });
     }
 
     const loc = file.box?.currentLocation;
@@ -564,22 +682,60 @@ router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: Authent
       });
     }
 
-    // 2. Resolve existing FileRecord or BarcodeMaster
+    // 2. Resolve existing FileRecord or BarcodeMaster and check barcode entity type
     let existingFile = await prisma.fileRecord.findFirst({
-      where: { barcode: cleanFileBarcode },
+      where: { barcode: { equals: cleanFileBarcode, mode: 'insensitive' } },
       include: { box: true }
     });
 
     const existingBarcodeMaster = await prisma.barcodeMaster.findFirst({
-      where: { barcode: cleanFileBarcode }
+      where: { barcode: { equals: cleanFileBarcode, mode: 'insensitive' } }
     });
 
-    // File MUST already exist or be registered in BarcodeMaster
-    if (!existingFile && !existingBarcodeMaster) {
+    // Check if barcode is actually a Box
+    const isBox = await prisma.box.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanFileBarcode, mode: 'insensitive' }
+      }
+    }) || (existingBarcodeMaster && existingBarcodeMaster.type === 'BOX');
+
+    if (isBox) {
+      console.warn(`[INSERT_FILE_FAILED] INVALID_BARCODE_TYPE (BOX): barcode=${cleanFileBarcode}`);
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_BARCODE_TYPE',
+        error: {
+          code: 'INVALID_BARCODE_TYPE',
+          message: 'Invalid barcode. Please scan a File barcode.'
+        }
+      });
+    }
+
+    // Check if barcode is a Location
+    const isLocation = await prisma.location.findFirst({
+      where: { barcode: { equals: cleanFileBarcode, mode: 'insensitive' } }
+    }) || (existingBarcodeMaster && existingBarcodeMaster.type === 'LOCATION');
+
+    if (isLocation) {
+      console.warn(`[INSERT_FILE_FAILED] INVALID_BARCODE_TYPE (LOCATION): barcode=${cleanFileBarcode}`);
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_BARCODE_TYPE',
+        error: {
+          code: 'INVALID_BARCODE_TYPE',
+          message: 'Invalid barcode. Please scan a File barcode.'
+        }
+      });
+    }
+
+    // File MUST already exist or be registered in BarcodeMaster as FILE_RECORD
+    if (!existingFile && (!existingBarcodeMaster || existingBarcodeMaster.type !== 'FILE_RECORD')) {
       console.warn(`[INSERT_FILE_FAILED] BARCODE_UNKNOWN: barcode=${cleanFileBarcode}`);
       return res.status(404).json({
         success: false,
-        error: { code: 'BARCODE_UNKNOWN', message: `File barcode '${cleanFileBarcode}' was not found.` }
+        code: 'BARCODE_UNKNOWN',
+        error: { code: 'BARCODE_UNKNOWN', message: 'Barcode not found.' }
       });
     }
 
@@ -589,6 +745,7 @@ router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: Authent
       console.warn(`[INSERT_FILE_FAILED] COMPANY_MISMATCH: fileCompanyId=${fileCompanyId}, boxCompanyId=${companyId}`);
       return res.status(409).json({
         success: false,
+        code: 'COMPANY_MISMATCH',
         error: {
           code: 'COMPANY_MISMATCH',
           message: 'File and Box belong to different companies.'
@@ -603,6 +760,7 @@ router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: Authent
       console.warn(`[INSERT_FILE_FAILED] WAREHOUSE_MISMATCH: fileWarehouseId=${fileWarehouseId}, boxWarehouseId=${boxWarehouseId}`);
       return res.status(409).json({
         success: false,
+        code: 'WAREHOUSE_MISMATCH',
         error: {
           code: 'WAREHOUSE_MISMATCH',
           message: 'File and Box belong to different warehouses.'
@@ -618,15 +776,17 @@ router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: Authent
         console.warn(`[INSERT_FILE_FAILED] FILE_ALREADY_IN_BOX: fileBarcode=${cleanFileBarcode}, boxBarcode=${box.barcode}`);
         return res.status(409).json({
           success: false,
+          code: 'FILE_ALREADY_IN_BOX',
           error: {
             code: 'FILE_ALREADY_IN_BOX',
-            message: `File ${cleanFileBarcode} is already inside Box ${box.barcode}.`
+            message: `File ${cleanFileBarcode} is already present in this box.`
           }
         });
       } else {
         console.warn(`[INSERT_FILE_FAILED] FILE_ALREADY_IN_ANOTHER_BOX: fileBarcode=${cleanFileBarcode}, assignedBoxBarcode=${existingFile.box?.barcode}`);
         return res.status(409).json({
           success: false,
+          code: 'FILE_ALREADY_IN_ANOTHER_BOX',
           error: {
             code: 'FILE_ALREADY_IN_ANOTHER_BOX',
             message: `File ${cleanFileBarcode} is already assigned to Box ${existingFile.box?.barcode || existingFile.boxId}.`
@@ -636,7 +796,7 @@ router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: Authent
     }
 
     // 6. Transactional File Insertion & Audit Log with Capacity Validation
-    const maxCapacity = box.capacity || (box.currentLocation as any)?.shelf?.rack?.room?.warehouse?.maxFilesPerBox || 50;
+    const maxCapacity = box.capacity || (box.currentLocation as any)?.shelf?.rack?.room?.warehouse?.maxFilesPerBox || 25;
 
     const resultFile = await prisma.$transaction(async (tx) => {
       // Atomic capacity verification inside transaction to prevent race conditions
@@ -645,7 +805,7 @@ router.post(['/search/boxes/:id/files', '/boxes/:id/files'], async (req: Authent
       });
 
       if (activeCount >= maxCapacity) {
-        const err: AppError = new Error(`Box ${box.barcode} has reached its maximum capacity of ${maxCapacity} files.`);
+        const err: AppError = new Error(`Cannot insert file. Box ${box.barcode} is full (${activeCount}/${maxCapacity}).`);
         err.statusCode = 409;
         err.code = ErrorCode.BOX_CAPACITY_EXCEEDED;
         throw err;
@@ -768,7 +928,72 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       console.warn(`[REFILE] Result: FAILURE (VALIDATION_ERROR)`);
       return res.status(400).json({
         success: false,
+        code: 'VALIDATION_ERROR',
         error: { code: 'VALIDATION_ERROR', message: 'File barcode and target box barcode are required' }
+      });
+    }
+
+    // Check if cleanFileBarcode is actually a Box (and not a File)
+    const fileIsBox = !(await prisma.fileRecord.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanFileBarcode, mode: 'insensitive' }
+      }
+    })) && (await prisma.box.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanFileBarcode, mode: 'insensitive' }
+      }
+    }) || await prisma.barcodeMaster.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanFileBarcode, mode: 'insensitive' },
+        type: 'BOX'
+      }
+    }));
+
+    if (fileIsBox) {
+      console.warn(`[REFILE] Result: FAILURE (INVALID_BARCODE_TYPE for file: Box scanned)`);
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_BARCODE_TYPE',
+        error: { code: 'INVALID_BARCODE_TYPE', message: 'Invalid barcode. Please scan a File barcode.' }
+      });
+    }
+
+    // Check if cleanTargetBoxBarcode is actually a File (and not a Box)
+    const targetIsBox = await prisma.box.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanTargetBoxBarcode, mode: 'insensitive' }
+      }
+    }) || await prisma.barcodeMaster.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanTargetBoxBarcode, mode: 'insensitive' },
+        type: 'BOX'
+      }
+    });
+
+    const targetIsFile = !targetIsBox && (await prisma.fileRecord.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanTargetBoxBarcode, mode: 'insensitive' }
+      }
+    }) || await prisma.barcodeMaster.findFirst({
+      where: {
+        companyId,
+        barcode: { equals: cleanTargetBoxBarcode, mode: 'insensitive' },
+        type: 'FILE_RECORD'
+      }
+    }));
+
+    if (targetIsFile) {
+      console.warn(`[REFILE] Result: FAILURE (INVALID_BARCODE_TYPE for target box: File scanned)`);
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_BARCODE_TYPE',
+        error: { code: 'INVALID_BARCODE_TYPE', message: 'Invalid barcode. Please scan a Box barcode.' }
       });
     }
 
@@ -824,7 +1049,7 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       console.warn(`[REFILE] Result: FAILURE (FILE_NOT_FOUND)`);
       return res.status(404).json({
         success: false,
-        error: { code: 'FILE_NOT_FOUND', message: `File barcode ${cleanFileBarcode} was not found in the system.` }
+        error: { code: 'FILE_NOT_FOUND', message: `File barcode ${cleanFileBarcode} is not registered. Please register the file before refiling.` }
       });
     }
 
@@ -914,10 +1139,10 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
     console.log(`[REFILE] Destination box: ${targetBox ? targetBox.id : 'null'} (${targetBox ? targetBox.barcode : 'null'})`);
 
     if (!targetBox) {
-      console.warn(`[REFILE] Result: FAILURE (TARGET_BOX_NOT_FOUND)`);
+      console.warn(`[REFILE] Result: FAILURE (BOX_NOT_FOUND)`);
       return res.status(404).json({
         success: false,
-        error: { code: 'TARGET_BOX_NOT_FOUND', message: `Box ${cleanTargetBoxBarcode} was not found.` }
+        error: { code: 'BOX_NOT_FOUND', message: 'Destination box was not found.' }
       });
     }
 
@@ -949,12 +1174,12 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       console.warn(`[REFILE] Result: FAILURE (SAME_BOX)`);
       return res.status(409).json({
         success: false,
-        error: { code: 'SAME_BOX', message: `File ${fileObj.barcode} is already present in this box.` }
+        error: { code: 'SAME_BOX', message: `File ${cleanFileBarcode} is already present in box ${targetBox.barcode}.` }
       });
     }
 
     // 5. Capacity Validation & Transactional Refile
-    const maxCapacity = targetBox.capacity || (targetBox.currentLocation as any)?.shelf?.rack?.room?.warehouse?.maxFilesPerBox || 50;
+    const maxCapacity = targetBox.capacity || (targetBox.currentLocation as any)?.shelf?.rack?.room?.warehouse?.maxFilesPerBox || 25;
 
     await prisma.$transaction(async (tx) => {
       const activeCount = await tx.fileRecord.count({
@@ -964,7 +1189,7 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
       console.log(`[REFILE] Capacity: current=${activeCount}, max=${maxCapacity}`);
 
       if (activeCount >= maxCapacity) {
-        const err: AppError = new Error(`Cannot refile file. Box ${targetBox.barcode} has reached its maximum capacity of ${maxCapacity} files.`);
+        const err: AppError = new Error('Box capacity is full. Cannot refile this file.');
         err.statusCode = 409;
         err.code = ErrorCode.BOX_CAPACITY_EXCEEDED;
         throw err;
@@ -1031,7 +1256,7 @@ router.post(['/refile', '/search/refile'], async (req: AuthenticatedRequest, res
 
     return res.status(200).json({
       success: true,
-      message: 'File refiled successfully',
+      message: `File ${fileObj.barcode} successfully refiled.`,
       data: {
         fileId: fileObj.id,
         fileBarcode: fileObj.barcode,

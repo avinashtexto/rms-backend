@@ -4,6 +4,7 @@
   "description": "Backend for RMS App",
   "main": "dist/app.js",
   "scripts": {
+    "predev": "lsof -ti:3002 | xargs kill -9 2>/dev/null || true",
     "build": "tsc",
     "start": "node dist/app.js",
     "dev": "npm run db:migrate && PORT=3002 nodemon --exec ts-node -r tsconfig-paths/register src/app.ts",

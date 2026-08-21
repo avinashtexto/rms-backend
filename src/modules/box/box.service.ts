@@ -266,10 +266,15 @@ export class BoxService {
     departmentId?: string | null,
     description?: string | null,
     status?: BoxStatus,
-    capacity?: number | null
+    capacity?: number | null,
+    userId?: string,
+    deviceId?: string | null
   ) {
     const box = await prisma.box.findFirst({
-      where: { id: boxId, companyId }
+      where: { id: boxId, companyId },
+      include: {
+        _count: { select: { fileRecords: true } }
+      }
     });
 
     if (!box) {
@@ -277,6 +282,25 @@ export class BoxService {
       error.statusCode = 404;
       error.code = ErrorCode.NOT_FOUND;
       throw error;
+    }
+
+    const currentFileCount = box._count.fileRecords;
+    if (capacity !== undefined && capacity !== null) {
+      if (capacity < 1) {
+        const error: AppError = new Error('Box capacity must be at least 1');
+        error.statusCode = 400;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
+
+      if (capacity < currentFileCount) {
+        const error: AppError = new Error(
+          `Cannot reduce box capacity below the current file count (${currentFileCount}).`
+        );
+        error.statusCode = 400;
+        error.code = ErrorCode.VALIDATION_ERROR;
+        throw error;
+      }
     }
 
     // If client is changing, verify tenant ownership
@@ -306,16 +330,62 @@ export class BoxService {
       }
     }
 
-    return prisma.box.update({
+    const prevCapacity = box.capacity ?? box.fileCapacity ?? 25;
+    const newCapacity = capacity !== undefined ? capacity : box.capacity;
+
+    const updated = await prisma.box.update({
       where: { id: boxId },
       data: {
         clientId: clientId !== undefined ? clientId : box.clientId,
         departmentId: departmentId !== undefined ? departmentId : box.departmentId,
         description: description !== undefined ? description : box.description,
         status: status !== undefined ? status : box.status,
-        capacity: capacity !== undefined ? capacity : box.capacity
+        capacity: capacity !== undefined ? capacity : box.capacity,
+        ...(capacity !== undefined && capacity !== null && { fileCapacity: capacity })
+      },
+      include: {
+        client: true,
+        department: true,
+        currentLocation: true,
+        _count: { select: { fileRecords: true } }
       }
     });
+
+    if (userId) {
+      await AuditService.recordAuditLog({
+        companyId,
+        userId,
+        action: 'BOX_UPDATED',
+        entityType: 'BOX',
+        entityId: updated.id,
+        boxId: updated.id,
+        deviceId: deviceId || null,
+        previousState: {
+          clientId: box.clientId,
+          departmentId: box.departmentId,
+          description: box.description,
+          status: box.status,
+          capacity: prevCapacity
+        },
+        newState: {
+          clientId: updated.clientId,
+          departmentId: updated.departmentId,
+          description: updated.description,
+          status: updated.status,
+          capacity: updated.capacity
+        }
+      });
+    }
+
+    const maxCapacity = updated.capacity ?? updated.fileCapacity ?? 25;
+    const fileCount = updated._count.fileRecords;
+
+    return {
+      ...updated,
+      capacity: maxCapacity,
+      fileCount,
+      availableSlots: Math.max(0, maxCapacity - fileCount)
+    };
   }
 
   static async deleteBox(companyId: string, boxId: string) {
